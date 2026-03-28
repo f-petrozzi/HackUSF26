@@ -5,6 +5,8 @@ POST /api/audit-logs — used by persist_audit_tool
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+from pydantic import Field
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,10 +33,10 @@ class AuditLogOut(BaseModel):
     action: str
     entity_type: str
     entity_id: str
-    metadata: Dict[str, Any]
+    metadata: Dict[str, Any] = Field(alias="meta", serialization_alias="metadata")
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True, "populate_by_name": True}
 
 
 @router.post("", response_model=AuditLogOut, status_code=201)
@@ -48,7 +50,7 @@ async def create_audit_log(
         action=body.action,
         entity_type=body.entity_type,
         entity_id=body.entity_id,
-        metadata=body.metadata,
+        meta=body.metadata,
     )
     db.add(log)
     await db.commit()
