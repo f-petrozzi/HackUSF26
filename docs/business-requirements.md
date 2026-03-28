@@ -1,39 +1,60 @@
-Requirements in user and business terms. Testable. One row per requirement.
+# Business Requirements — CareMesh
 
-| Requirement (business) | Problem / user need | Primary user | Success metric | Priority (P0/P1/P2) | Dependencies | Owner | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Combine wearable health data, nutrition, and fitness guidance into one app | Users currently need multiple apps to understand their health, food, and exercise habits | All users | Users can access health, meal, and workout information from one dashboard | P0 | User profile, dashboard, device/manual data | TBD | Not Started |
-| Connect to wearable devices such as Garmin and Apple Watch | Users want automatic, accurate tracking without entering everything manually | Users with wearables | Successful device connection and sync rate above 90% | P0 | Device integration APIs, user account | TBD | Not Started |
-| Weight device data more heavily than manual input | Manual logs may be less accurate than wearable data | Users with wearables | Recommendations use wearable data whenever available | P1 | Device integration, recommendation engine | TBD | Not Started |
-| Create and maintain a user profile with demographics, goals, and preferences | Recommendations are not useful without understanding the user | All users | 80%+ of users complete profile setup | P0 | Authentication, onboarding | TBD | Not Started |
-| Track sleep, steps, exercise, heart rate, HRV, stress, calories burned, and other metrics | Users want a complete view of their health and activity | All users | Users can view all tracked metrics in one place | P0 | Device integration or manual input | TBD | Not Started |
-| Allow manual entry of health metrics | Users without devices still need access to the app | Users without wearables | Users can successfully log metrics manually | P0 | User profile, dashboard | TBD | Not Started |
-| Suggest values for manual entries based on profile and history | Users may not know what information to enter | Users without wearables | 70%+ of suggested values are accepted or edited slightly | P1 | Manual entry, user history | TBD | Not Started |
-| Estimate missing health metrics for users without devices | Users without wearables still need personalized recommendations | Users without wearables | Estimated metrics enable recommendations comparable to device users | P1 | User profile, manual inputs | TBD | Not Started |
-| Provide a dashboard with trends, insights, and recommendations | Raw data is difficult for users to understand | All users | Users engage with dashboard at least once per day | P0 | Metrics tracking, recommendation engine | TBD | Not Started |
-| Recommend meals, nutrition, and workouts based on similar users | Users want more personalized recommendations | All users | Recommendation engagement and acceptance rate above 60% | P1 | User profile, historical data | TBD | Not Started |
-| Include meal logging and nutrition tracking | Users need to understand what they are eating | All users | Users can log meals and view calories/macros | P0 | Recipe system, nutrition database | TBD | Not Started |
-| Import recipes from websites or text | Users do not want to manually rewrite recipes | Users who cook | Successful import rate above 90% | P0 | Recipe parser | TBD | Not Started |
-| Reformat imported recipes into ingredients, measurements, and instructions | Recipes from websites are often hard to read or inconsistent | Users who cook | Imported recipes display in a clean standardized format | P0 | Recipe import | TBD | Not Started |
-| Highlight ingredients within recipe instructions and show measurements inline | Users waste time scrolling between ingredients and instructions | Users who cook | Reduced time to follow recipe and positive usability feedback | P1 | Recipe parser and display | TBD | Not Started |
-| Remember previously imported recipes to reduce duplicate processing | Users may import the same recipe more than once | Users who cook | Duplicate recipes are recognized and loaded instantly | P2 | Recipe database | TBD | Not Started |
-| Search the internet for recipes based on goals, restrictions, ingredients, and time | Users want help finding meals that fit their needs | All users | Users can find a relevant recipe within 3 searches | P1 | Recipe search integration, user profile | TBD | Not Started |
-| Recommend meals and recipes based on recent health data | Users want meal suggestions that reflect their current condition | All users | Users follow recommended meals at least 50% of the time | P1 | Metrics tracking, nutrition engine | TBD | Not Started |
-| Log selected recipes and meals into nutrition history | Users want recommendations to improve over time | All users | Meal history is stored and used in later recommendations | P0 | Meal logging | TBD | Not Started |
-| Generate exercise recommendations and workout plans | Users do not know what workout is appropriate for their goals and recovery | All users | Users view or save a generated workout plan | P0 | User profile, wearable/manual data | TBD | Not Started |
-| Adapt meal and workout recommendations based on sleep, stress, and recovery | Static recommendations may be unsafe or ineffective | All users | Users receive different recommendations when their condition changes | P1 | Metrics tracking, recommendation engine | TBD | Not Started |
-| Explain why each recommendation was made | Users are more likely to trust and follow recommendations they understand | All users | Users report understanding recommendations in feedback surveys | P1 | Recommendation engine | TBD | Not Started |
-| Allow users to rate whether recommendations worked | The app needs feedback to improve over time | All users | 50%+ of users provide recommendation feedback | P1 | Recommendation system | TBD | Not Started |
-| Improve recommendations over time using collected data and feedback | Users want the app to become more personalized | All users | Recommendation satisfaction increases over time | P2 | Feedback system, historical data | TBD | Not Started |
-| Support a wide range of fitness levels and health goals | Users have different needs and abilities | All users | Users can choose from multiple goals and activity levels | P0 | User profile | TBD | Not Started |
-| Protect user privacy by limiting stored personally identifiable information | Users need to trust that their health data is secure | All users | No unnecessary personal information stored in recommendation systems | P0 | Data storage and security design | TBD | Not Started |
-| Securely store historical user data and recipe information | Users expect their information and history to persist | All users | User history is retained and accessible between sessions | P0 | Database and authentication | TBD | Not Started |
-| Provide an internal analytics dashboard for the development team | The team needs to understand app usage and growth | Developers / product team | Dashboard shows sign-ups, active users, and feature usage | P2 | Backend analytics collection | TBD | Not Started |
-| Allow users to set a primary goal such as weight loss, muscle gain, or improved sleep | Users want recommendations tailored to what matters most to them | All users | 90%+ of users choose a goal during onboarding | P0 | User profile | TBD | Not Started |
-| Provide a daily summary of key metrics and next actions | Users want a simple overview instead of opening multiple screens | All users | Users view the daily summary regularly | P1 | Dashboard, recommendations | TBD | Not Started |
-| Notify users when important trends are detected | Users may not notice concerning or important changes on their own | All users | Users receive and open relevant alerts | P2 | Metrics tracking, notifications | TBD | Not Started |
-| Support dietary styles and restrictions such as vegetarian, vegan, gluten-free, and allergies | Users need meal recommendations that fit their lifestyle and restrictions | All users | Users only receive recipes matching their preferences | P0 | User profile, recipe system | TBD | Not Started |
-| Allow users to save favorite meals, recipes, and workouts | Users want quick access to what they like or use often | All users | Users can save and revisit favorites | P2 | Recipe and workout modules | TBD | Not Started |
-| Allow users to compare their current metrics to previous weeks or months | Users want to see whether they are making progress | All users | Users can view trends over time | P1 | Historical data, dashboard | TBD | Not Started |
-|  |  |  |  |  |  |  |  |
-|  |  |  |  |  |  |  |  |
+CareMesh is a multi-agent care coordination platform that uses health signals (wearable-simulated or manually entered) to detect emerging strain, reason about it in the context of the user's persona, and deliver an empathy-first support plan with concrete wellness, meal, and activity recommendations.
+
+It is not a fitness tracker. It is not a chatbot. It is a care operations system with an agentic intelligence layer built on Google ADK.
+
+---
+
+## In scope for hackathon MVP
+
+| Requirement | Problem / user need | Primary user | Success metric | Priority |
+|---|---|---|---|---|
+| Single platform combining health signals and care coordination | Users currently need multiple apps; neither a wellness tracker nor a chatbot alone is sufficient | All personas | Users see current health signals and a personalized care plan on one dashboard | P0 |
+| Onboarding with persona, goals, and preferences | Recommendations are not useful without knowing who the user is | All users | Every user completes onboarding before accessing the dashboard | P0 |
+| Health signal ingestion via wearable simulator or manual check-in | Users need to submit data without requiring a real device for the hackathon demo | All users | Users can submit a signal event and trigger an agent run in under 30 seconds | P0 |
+| Multi-agent orchestration using Google ADK | Platform must demonstrate real agentic architecture, not a wrapper around one LLM call | Platform / judges | ParallelAgent and LoopAgent execute and are visible in the trace dashboard | P0 |
+| Persona-aware specialist reasoning | A stress signal means different things for a student vs a caregiver vs an older adult | All personas | Different personas produce different support plans from identical input signals | P0 |
+| Remote A2A specialist invocation | Demonstrate distributed multi-agent collaboration for Google challenge alignment | Platform / judges | Student Support and Caregiver Burnout specialists are invoked through A2A and visible in the trace | P0 |
+| Risk stratification at four levels | The platform must translate signals into urgency to decide what action to take | All users | Every agent run produces a risk level: low, moderate, high, or critical | P0 |
+| Intervention planning with meal, activity, and wellness options | Users need concrete, persona-appropriate action recommendations, not just a diagnosis | All users | Every completed run produces at least one meal suggestion, one activity suggestion, and one wellness action | P0 |
+| Empathy-first user-facing messaging | Clinical or punitive language reduces trust and engagement | All users | Messages are supportive and non-judgmental; no "you failed" framing | P0 |
+| Validation loop with visible self-correction | Plans must be checked for contradictions and safety gaps before delivery | All users | Loop runs at least once per agent run; iterations and corrections are visible in trace | P0 |
+| Support case creation for moderate or higher risk | High-risk users need a coordinator follow-up, not just a message | Coordinators | Cases are created in the database when risk is moderate or above | P0 |
+| Member dashboard | Users need a calm, clear view of their current signals, support plan, and empathy message | Members | Dashboard loads a complete support plan within 10 seconds of a signal event | P0 |
+| Care coordinator dashboard | Coordinators need to see which members need follow-up and why | Coordinators | Dashboard shows all open cases with persona type and risk level | P0 |
+| Agent trace dashboard | Judges and operators need to inspect the multi-agent execution | Admins / judges | Trace shows agent sequence, parallel branches, A2A calls, loop iterations, and final action | P0 |
+| Scenario runner for demo | Judges need reliable, repeatable demo triggers without live user setup | Judges / demo | Loading a seeded scenario and triggering the pipeline produces a complete plan and trace in under 30 seconds | P0 |
+| Accessibility-adapted output for accessibility persona | Older adults and users with cognitive load constraints need simpler instructions | Accessibility persona | Plans for this persona use simplified language and reduced-step guidance | P1 |
+| Pseudonymized data storage | Health data must not be tied to personally identifiable information | All users | Health, recommendation, and case tables contain no names or email addresses | P1 |
+| Audit log of every agent run | Traceability is a first-class requirement, not an afterthought | Platform | Every agent run has a durable, queryable record with inputs, outputs, timestamps, and status | P1 |
+
+---
+
+## Back in MVP scope
+
+These features were initially deferred but are back in scope for the hackathon MVP.
+
+| Requirement | Priority |
+|---|---|
+| Garmin OAuth connection and background sync | P1 |
+| Health data dashboard (steps, sleep, HR, HRV, stress, calories) | P1 |
+| Recipe import from URL | P1 |
+| Recipe import from pasted text | P1 |
+| Recipe storage, search, and detail view | P1 |
+| Meal planning with recipe linkage | P2 |
+| Manual calorie log with AI calorie estimate | P2 |
+
+---
+
+## Out of scope for hackathon MVP (future phase)
+
+| Requirement | Reason deferred |
+|---|---|
+| Apple Health integration | No iOS device available in hackathon context |
+| Push notifications and reminders | Requires notification service and tokens; not needed for demo |
+| Similar-user clustering | Requires a user base or synthetic cohort |
+| Vector database for semantic search | Plain SQL sufficient for hackathon scale |
+| Advanced collaborative filtering | Requires production data |
+| Multi-role admin access | Single admin role sufficient |
+| Senior Wellness and Accessibility Coach A2A specialists | Two A2A specialists enough to demonstrate the pattern |

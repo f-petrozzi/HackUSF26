@@ -1,506 +1,297 @@
-## Overview
+# Technical Requirements — CareMesh MVP
 
-This document translates the approved business requirements into technical requirements for the MVP and identifies future phase items. The MVP is a web application with responsive mobile sizing support targeted at university students who want integrated health, meal, and workout guidance.
-
-The MVP includes:
-
-- Garmin integration
-- AI meal and workout assistants
-- Recipe extraction and parsing
-- Personalized recommendations based on profile and health data
-- Historical metric tracking and comparisons
-- Developer analytics dashboard
-- Pseudonymized data governance and PII protection
-
-Future phase items include Apple Health integration, advanced collaborative filtering, push notifications, richer recovery logic, and multi-role admin access.
+This document translates approved business requirements into specific technical requirements for the hackathon MVP. All items are achievable in one day by 4 Codex instances and 1 Claude instance working in parallel.
 
 ---
 
-| System Area | Technical Requirement | Priority | MVP / Future |
-| --- | --- | --- | --- |
-| Authentication | Require authentication before any health or recommendation features are accessible | P0 | MVP |
-| Authentication | Store only auth provider subject ID, internal pseudonymous user ID, and support email in the application database | P0 | MVP |
-| Authentication | Separate PII storage from health, recommendation, and analytics data | P0 | MVP |
-| Authentication | Support account deletion through soft delete followed by permanent purge after a retention period | P1 | MVP |
-| Authentication | Allow users to disconnect wearable accounts | P1 | MVP |
-| Authentication | Provide a single internal admin role with separate access controls | P1 | MVP |
-| Onboarding | Require onboarding completion before dashboard access | P0 | MVP |
-| Onboarding | Use a single-screen questionnaire to collect age range, sex, height, weight, goals, activity level, gym frequency, equipment, dietary style, allergies, injuries, sleep quality, and cooking time preference | P0 | MVP |
-| Onboarding | Allow one active goal at a time and allow it to be changed later | P0 | MVP |
-| Garmin Integration | Support Garmin as the only live wearable integration in MVP | P0 | MVP |
-| Garmin Integration | Use OAuth and scheduled polling for Garmin sync | P0 | MVP |
-| Garmin Integration | Store steps, sleep, heart rate, resting heart rate, HRV, stress, calories burned, workouts, and weight | P0 | MVP |
-| Garmin Integration | Store both raw wearable data and normalized daily summaries | P1 | MVP |
-| Garmin Integration | Retain historical data for day, week, and month comparisons | P0 | MVP |
-| Garmin Integration | Support future webhook integration if Garmin later supports it | P2 | Future |
-| Manual Input | Allow manual entry of weight, sleep hours, workouts, calories, and notes | P0 | MVP |
-| Manual Input | Allow manual values to override Garmin values after a warning popup | P1 | MVP |
-| Manual Input | Estimate missing values using profile and recent history and clearly label them as estimates | P1 | MVP |
-| Meal Assistant | Provide a dedicated AI meal planning assistant with live web browsing | P0 | MVP |
-| Meal Assistant | Return the top three meal recommendations for every request | P0 | MVP |
-| Meal Assistant | Base recommendations on goals, calorie target, calories burned, dietary restrictions, allergies, and recent health metrics | P0 | MVP |
-| Meal Assistant | Automatically calculate a daily calorie target and allow manual override after a warning | P1 | MVP |
-| Meal Assistant | Explain every recommendation and reference the metrics used | P1 | MVP |
-| Meal Assistant | Limit recommendation regeneration to control cost | P1 | MVP |
-| Meal Assistant | Fall back to rule-based recommendations if the AI provider fails | P1 | MVP |
-| Recipe Parsing | Support recipe import from URL, pasted text, and AI assistant search results | P0 | MVP |
-| Recipe Parsing | Parse recipes into ingredients, measurements, instructions, servings, and calories per serving when possible | P0 | MVP |
-| Recipe Parsing | Highlight ingredients inline within instructions | P1 | MVP |
-| Recipe Parsing | Store only parsed recipe data, not raw text or source URL in user-facing storage | P1 | MVP |
-| Recipe Parsing | Add duplicate recipe detection | P2 | Future |
-| Workout Assistant | Provide a dedicated AI workout assistant | P0 | MVP |
-| Workout Assistant | Return the top three workout session recommendations | P0 | MVP |
-| Workout Assistant | Use goals, equipment, workout history, sleep, stress, HRV, heart rate, injuries, and available time to generate workouts | P0 | MVP |
-| Workout Assistant | Include exercises, sets, reps, rest periods, and substitutions in every workout | P0 | MVP |
-| Workout Assistant | Support both cardio and strength workouts | P1 | MVP |
-| Workout Assistant | Use workout history to support progression over time | P1 | MVP |
-| Safety Engine | Run a rule layer before showing AI recommendations | P0 | MVP |
-| Safety Engine | Trigger warnings for poor sleep, high stress, low HRV, elevated heart rate, aggressive calorie deficit, and lack of recovery | P0 | MVP |
-| Safety Engine | Allow user override after warning and log the override event | P1 | MVP |
-| Safety Engine | Recommend rest days, lighter workouts, or increased calories when needed | P1 | MVP |
-| Dashboard | Provide separate tabs for Dashboard, Chat, Meals, Recipes, Workouts, Profile, and Admin | P0 | MVP |
-| Dashboard | Show today's metrics, recommendation summaries, trend charts, goal progress, recent meals, recent workouts, and raw metrics | P0 | MVP |
-| Dashboard | Allow comparisons by day, week, and month | P1 | MVP |
-| Dashboard | Support both chart-based and card-based views | P1 | MVP |
-| Feedback | Allow recommendation ratings using thumbs up/down or 1-5 scale | P1 | MVP |
-| Feedback | Store recommendation feedback with timestamp and recommendation inputs | P1 | MVP |
-| Similar Users | Use clustering based on profile and questionnaire data with seeded synthetic users | P1 | MVP |
-| Similar Users | Label similar-user functionality as beta | P2 | MVP |
-| Admin Dashboard | Provide an internal admin dashboard behind admin authentication | P1 | MVP |
-| Admin Dashboard | Track signups, onboarding completion, Garmin success, sync failures, AI usage, recipe import success, recommendation acceptance, workout saves, DAU, errors, and override rates | P1 | MVP |
-| Admin Dashboard | Allow filtering by feature and error type | P1 | MVP |
-| Admin Dashboard | Restrict admin views to anonymized analytics only | P0 | MVP |
-| Data Governance | Log analytics events as append-only immutable records | P1 | MVP |
-| Data Governance | Log and store every recommendation with inputs, outputs, timestamp, and feedback | P1 | MVP |
-| Data Governance | Encrypt health and profile data in transit and at rest | P0 | MVP |
-| Data Governance | Logically separate PII, health metrics, recipes, embeddings, and analytics storage domains | P0 | MVP |
-| Data Governance | Support local development using mocked Garmin and AI data | P1 | MVP |
-| Vector Database | Include a vector database for semantic recipe search, workout retrieval, user preference retrieval, and analytics exploration | P1 | MVP |
-| Vector Database | Generate embeddings for recipes and user preferences | P1 | MVP |
-| AI Architecture | Provide separate meal and workout assistants with tool calling and streaming responses | P1 | MVP |
-| AI Architecture | Give assistants access to profile, health metrics, saved recipes, and workout history through a unified context layer | P1 | MVP |
-| API | Expose a single backend API to the frontend | P0 | MVP |
-| API | Document internal API contracts for major modules | P1 | MVP |
-| Background Jobs | Run background jobs for Garmin sync, recipe parsing, embedding generation, and analytics aggregation | P1 | MVP |
-| Reliability | Surface failed Garmin syncs, recipe parsing failures, and AI failures in the admin dashboard | P1 | MVP |
-| Reliability | Continue functioning in manual mode when Garmin is unavailable | P0 | MVP |
-| Reliability | Fail gracefully when external APIs are unavailable | P1 | MVP |
-| Security | Add audit logging for admin actions | P1 | MVP |
-| Security | Add rate limiting for chat and recipe import endpoints | P1 | MVP |
-| Security | Use secrets management and separate local, staging, and production environments | P1 | MVP |
-| Future Phase | Add Apple Health integration | P2 | Future |
-| Future Phase | Add push notifications and reminders | P2 | Future |
-| Future Phase | Add advanced collaborative filtering using real production user behavior | P2 | Future |
-| Future Phase | Add global recommendation learning from user feedback | P2 | Future |
-| Future Phase | Add multi-role admin access | P2 | Future |
-| Future Phase | Add grocery list generation | P2 | Future |
-| Future Phase | Add persistent conversational memory in the chatbot | P2 | Future |
-- The system shall require user authentication before any health or recommendation features can be accessed.
-- The system shall support authentication through a third-party identity provider.
-- The application database shall store only the authentication provider subject ID, pseudonymous internal user ID, and required support email.
-- Personally identifiable information shall be isolated in a dedicated user identity store separate from health, analytics, and recommendation data.
-- The backend shall not use names or emails as primary keys.
-- The system shall support account deletion through soft delete followed by permanent purge after a configurable retention period.
-- The system shall allow users to disconnect wearable accounts.
-- The system shall support a single admin role with separate access controls.
+## 1. Authentication and Identity
 
-### Acceptance Criteria
+| Requirement | Priority | MVP |
+|---|---|---|
+| Require authentication before accessing any dashboard or triggering any agent run | P0 | MVP |
+| Support simple email/password auth with JWT tokens (no OAuth provider required for MVP) | P0 | MVP |
+| Store only internal user ID and support email in the auth table | P0 | MVP |
+| Health, case, and recommendation tables must reference internal user ID only — no names or emails | P0 | MVP |
+| Support a single admin role with separate dashboard access | P1 | MVP |
+| Support account deletion (soft delete, immediate deactivation) | P2 | Future |
 
-- Users cannot access app data without authentication.
-- Health and recommendation tables contain no names or direct identifiers.
-- Deleting an account marks it inactive immediately and permanently removes data after the purge window.
-- Admin users can only view anonymized user level analytics.
+**Acceptance criteria:** A user cannot reach any app screen without a valid JWT. Health tables contain no PII columns.
+
+---
 
 ## 2. Onboarding and User Profile
 
-### Technical Requirements
-
-- The system shall require onboarding completion before recommendations are shown.
-- The onboarding flow shall be a single-screen questionnaire.
-- Required onboarding fields shall include:
-    - Age range
-    - Sex
-    - Height
-    - Weight
-    - Primary goal
-    - Activity level
-    - Gym frequency
-    - Equipment access
-    - Dietary style
-    - Allergies
-    - Injuries or limitations
-    - Typical sleep quality
-    - Preferred cooking time
-- Optional fields may include preferred cuisines, disliked foods, and manual calorie target override.
-- The system shall allow users to maintain one active goal at a time and change it later.
-- The system shall support manual override of calorie targets and recommendation warnings.
-
-### Acceptance Criteria
-
-- Users cannot continue to the dashboard until all required fields are completed.
-- Users can change goals and profile settings after onboarding.
-- Changing a goal updates recommendation inputs immediately.
-
-## 3. Garmin Integration and Health Data
-
-### Technical Requirements
-
-- The MVP shall support live Garmin integration only.
-- Garmin data shall be retrieved using OAuth and scheduled polling.
-- The architecture shall support future webhook integration if Garmin later supports it.
-- The system shall ingest and store:
-    - Steps
-    - Sleep duration
-    - Heart rate
-    - Resting heart rate
-    - HRV
-    - Stress
-    - Calories burned
-    - Workout sessions
-    - Weight if available
-- Garmin sync jobs shall run periodically in the background.
-- The system shall store both raw wearable data and normalized daily summaries.
-- Historical health data shall be retained for longitudinal trend analysis.
-- If Garmin data is unavailable, the user may manually enter metrics.
-- Manual values may override Garmin values after a warning confirmation.
-
-### Acceptance Criteria
-
-- Garmin connection succeeds for at least 90% of test accounts.
-- Newly synced data appears in the dashboard after the next polling cycle.
-- Manual overrides are logged and retained.
-- Users can compare historical data by day, week, and month.
-
-## 4. Manual Data Entry
-
-### Technical Requirements
-
-- The system shall support manual entry of:
-    - Weight
-    - Sleep hours
-    - Workout completion
-    - Calories consumed
-    - Notes
-- The system shall support full manual operation when no Garmin account is connected.
-- The system shall estimate missing values where possible using profile and recent history.
-- Estimated values shall be shown to the user and clearly labeled.
-
-### Acceptance Criteria
-
-- A user without Garmin can complete onboarding and receive recommendations.
-- Estimated values are visually distinguished from measured values.
-
-## 5. AI Meal Assistant
-
-### Technical Requirements
-
-- The system shall provide a dedicated AI meal planning assistant.
-- The meal assistant shall be allowed to browse the web.
-- The assistant shall return the top three meal recommendations.
-- Meal recommendations shall incorporate:
-    - User goal
-    - Daily calorie target
-    - Calories burned
-    - Dietary restrictions
-    - Allergies
-    - Saved preferences
-    - Recent activity and recovery metrics
-- The assistant shall calculate a daily calorie target automatically.
-- The user may manually override the calorie target after a warning.
-- The assistant shall support limited recommendation regeneration to reduce API cost.
-- The assistant shall explain why each recommendation was generated and cite the metrics used.
-- The assistant shall fall back to rule-based recommendations if the LLM fails.
-
-### Acceptance Criteria
-
-- Meal recommendations always return three options.
-- Recommendations include calorie estimates and reasoning.
-- The system gracefully falls back if the AI provider fails.
-
-## 6. Recipe Extraction and Parsing
-
-### Technical Requirements
-
-- The system shall support recipe creation from:
-    - URL input
-    - Raw pasted text
-    - AI assistant web search
-- Recipes shall be parsed into:
-    - Ingredients
-    - Measurements
-    - Instructions
-    - Servings
-    - Estimated calories per serving when possible
-- Ingredients referenced in instructions shall be highlighted inline.
-- Parsed recipes shall be stored in a centralized recipe repository.
-- Only the parsed recipe data shall be stored. Original source URLs and raw text shall not be stored in the user-facing database.
-- Duplicate recipe detection is a future enhancement and not required for MVP.
-
-### Acceptance Criteria
-
-- At least 90% of supported recipe URLs and pasted text are parsed successfully.
-- Parsed recipes display in a standardized format.
-
-## 7. AI Workout Assistant
-
-### Technical Requirements
-
-- The system shall provide a dedicated AI workout assistant.
-- The workout assistant shall return the top three workout session recommendations.
-- Workout recommendations shall be generated using:
-    - Goal
-    - Equipment access
-    - Workout history
-    - Sleep
-    - Stress
-    - HRV
-    - Resting heart rate
-    - Injury limitations
-    - Available workout time
-- Each recommendation shall include:
-    - Exercises
-    - Sets
-    - Reps
-    - Rest periods
-    - Exercise substitutions
-- The assistant shall support both strength and cardio workouts.
-- The assistant shall support progression using overall workout history.
-- The assistant shall limit recommendation regeneration.
-
-### Acceptance Criteria
-
-- The assistant returns three complete workout options.
-- Recommendations change when recovery metrics worsen.
-- Workouts can be saved and logged.
-
-## 8. Safety and Rule Engine
-
-### Technical Requirements
-
-- The system shall include a non-bypassable rule evaluation layer before any AI recommendation is shown.
-- The rule engine shall evaluate:
-    - Poor sleep
-    - High stress
-    - Low HRV
-    - Elevated resting heart rate
-    - Aggressive calorie deficits
-    - Insufficient recovery days
-- The system shall show a warning dialog when these thresholds are triggered.
-- The user may override the recommendation after acknowledging the warning.
-- The override action shall be logged.
-- The system shall support recommending rest days, light workouts, or increased calories when appropriate.
-
-### Acceptance Criteria
-
-- Unsafe recommendations are intercepted before display.
-- Warning overrides are recorded and visible in admin analytics.
-
-## 9. Dashboard and Historical Views
-
-### Technical Requirements
-
-- The application shall provide separate tabs for:
-    - Dashboard
-    - Chat
-    - Meals
-    - Recipes
-    - Workouts
-    - Profile
-    - Admin
-- The dashboard shall default to today's metrics.
-- The dashboard shall include:
-    - Key metric cards
-    - Recommendation summaries
-    - Historical trend charts
-    - Goal progress
-    - Recent meals and workouts
-    - Raw wearable metrics
-- Users shall be able to compare metrics by day, week, and month.
-- Users shall be able to switch between card-based and chart-based views.
-
-### Acceptance Criteria
-
-- Users can view both summarized and raw data.
-- Dashboard views load within acceptable user expectations for the demo.
-
-## 10. Feedback and Recommendation Learning
-
-### Technical Requirements
-
-- The system shall allow users to rate recommendations with either thumbs up/down or a 1-5 rating.
-- Ratings shall be stored with the recommendation, inputs, and timestamp.
-- Recommendation feedback shall affect future model quality analytics but not real-time learning during MVP.
-- Similar-user logic shall use clustering of profile and questionnaire data combined with synthetic seed users.
-- Similar-user features shall be labeled as beta.
-
-### Acceptance Criteria
-
-- Users can submit feedback on every recommendation.
-- Feedback data is visible in admin analytics.
-
-## 11. Admin Dashboard and Analytics
-
-### Technical Requirements
-
-- The system shall provide an internal admin dashboard inside the same application behind admin authentication.
-- The admin dashboard shall track:
-    - Signups
-    - Onboarding completion
-    - Garmin connection success
-    - Sync failures
-    - AI assistant usage
-    - Recipe import success
-    - Recommendation acceptance
-    - Workout saves
-    - Daily active users
-    - Error types
-    - Recommendation override rates
-- Analytics events shall be append-only and immutable.
-- Admin users shall be able to filter by feature and error type.
-- The admin dashboard shall not expose identifiable user data.
-
-### Acceptance Criteria
-
-- The team can monitor feature adoption and failures in real time.
-- Error spikes are visible without viewing user identities.
-
-## 12. Data Storage and Governance
-
-### Technical Requirements
-
-- The system shall logically separate:
-    - Identity and PII data
-    - Health metrics
-    - Recipes
-    - Analytics logs
-    - Vector embeddings
-- The system shall encrypt health and profile data both in transit and at rest.
-- The system shall support append-only event logging.
-- The system shall store every recommendation with:
-    - Inputs
-    - Output text
-    - Timestamp
-    - User feedback
-- The system shall not store raw AI prompts or conversations in MVP.
-- The system shall support local development with mocked Garmin and AI data.
-- Seed data and demo personas shall be provided.
-
-### Acceptance Criteria
-
-- PII and health data are stored in separate domains.
-- Recommendation history is auditable.
-
-## 13. Vector Database and AI Architecture
-
-### Technical Requirements
-
-- The MVP shall include a vector database.
-- The vector database shall support:
-    - Semantic recipe search
-    - Retrieval of user preferences
-    - Workout retrieval
-    - Analytics exploration
-- Embeddings shall be generated for recipes and user preferences.
-- The chatbot shall access a unified context layer containing:
-    - User profile
-    - Health metrics
-    - Saved recipes
-    - Workout history
-- AI interactions shall use structured tool-calling patterns.
-- AI responses shall stream progressively in the UI.
-
-### Acceptance Criteria
-
-- Semantic search returns relevant recipes and workout suggestions.
-- AI responses continue functioning even when some context sources are unavailable.
-
-## 14. API and Background Processing
-
-### Technical Requirements
-
-- The frontend shall communicate through a single backend API.
-- The backend shall expose documented internal API contracts.
-- The system shall support background jobs for:
-    - Garmin sync
-    - Recipe parsing
-    - Embedding generation
-    - Analytics aggregation
-- The system shall support local development using mocked integrations.
-- Seed demo users and sample data shall be available for testing.
-
-### Acceptance Criteria
-
-- Developers can run the app locally without external services.
-- Background jobs continue operating independently from the UI.
-
-## 15. Security, Logging, and Reliability
-
-### Technical Requirements
-
-- The system shall support:
-    - Audit logging for admin actions
-    - Rate limiting for AI and recipe endpoints
-    - Secrets management
-    - Separate environments for local, staging, and production
-- The system shall surface failed syncs, failed recipe parsing, and failed AI calls in the admin dashboard.
-- The system shall fail gracefully when external APIs are unavailable.
-- The system shall continue operating in manual-entry mode if Garmin is unavailable.
-
-### Acceptance Criteria
-
-- Failed external integrations are visible to the team.
-- The application remains usable when integrations fail.
+| Requirement | Priority | MVP |
+|---|---|---|
+| Require onboarding completion before the member dashboard is accessible | P0 | MVP |
+| Onboarding collects: age range, sex, height, weight, primary goal, activity level, dietary style, allergies, persona type | P0 | MVP |
+| Persona type is one of: student, caregiver, older_adult, accessibility_focused | P0 | MVP |
+| Store accessibility preferences: simplified_language, large_text, low_energy_mode | P1 | MVP |
+| Allow users to update profile and goal after onboarding | P1 | MVP |
+| Goal options: stress_reduction, better_sleep, weight_loss, energy_improvement, burnout_recovery | P0 | MVP |
+
+**Acceptance criteria:** Onboarding is a single-page form. Submitting it creates user_profile and redirects to dashboard.
 
 ---
 
-# Business Requirement to Technical Requirement
+## 3. Health Signal Ingestion
 
-| Business Requirement | Technical Requirement |
-| --- | --- |
-| Combine wearable health data, nutrition, and fitness guidance into one app | System provides integrated dashboard, AI meal assistant, AI workout assistant, and historical health data in a single authenticated application. |
-| Connect to wearable devices such as Garmin and Apple Watch | MVP supports Garmin integration through OAuth and polling. Apple Health is future phase. |
-| Weight device data more heavily than manual input | Recommendation engine prioritizes Garmin values and only allows manual override after warning confirmation. |
-| Create and maintain a user profile with demographics, goals, and preferences | Single-screen onboarding captures required profile fields and stores them in pseudonymized profile tables. |
-| Track sleep, steps, exercise, heart rate, HRV, stress, calories burned, and other metrics | Garmin integration and manual entry support capture all required health metrics and store raw plus normalized values. |
-| Allow manual entry of health metrics | Manual logging supports weight, sleep, calories, workouts, and notes. |
-| Suggest values for manual entries based on profile and history | Missing value estimation uses profile and recent history and labels estimates clearly. |
-| Estimate missing health metrics for users without devices | Rule-based estimation generates visible placeholder values when wearable data is unavailable. |
-| Provide a dashboard with trends, insights, and recommendations | Dashboard includes summary cards, trend charts, recommendations, and raw metric views. |
-| Recommend meals, nutrition, and workouts based on similar users | Similar-user clustering combines profile data and seed cohorts to influence recommendations. |
-| Include meal logging and nutrition tracking | Meal assistant and manual logging support calorie tracking and meal history. |
-| Import recipes from websites or text | Recipe parser accepts URLs, pasted text, and AI-discovered recipes. |
-| Reformat imported recipes into ingredients, measurements, and instructions | Recipe parser outputs standardized recipe structure. |
-| Highlight ingredients within recipe instructions and show measurements inline | Parsed instructions include inline ingredient highlighting. |
-| Remember previously imported recipes to reduce duplicate processing | Duplicate detection deferred to future phase. |
-| Search the internet for recipes based on goals, restrictions, ingredients, and time | AI meal assistant may browse the web and return top three filtered meal options. |
-| Recommend meals and recipes based on recent health data | Meal assistant incorporates calorie burn, recovery metrics, and current goal. |
-| Log selected recipes and meals into nutrition history | Selected meals are stored in the user meal history table. |
-| Generate exercise recommendations and workout plans | Workout assistant generates three structured workout sessions. |
-| Adapt meal and workout recommendations based on sleep, stress, and recovery | Rule engine and AI assistant use sleep, stress, HRV, and heart rate to modify recommendations. |
-| Explain why each recommendation was made | Every recommendation includes a text explanation citing the metrics used. |
-| Allow users to rate whether recommendations worked | Recommendations can be rated and stored with timestamps. |
-| Improve recommendations over time using collected data and feedback | Recommendation feedback is stored for future model quality analytics. |
-| Support a wide range of fitness levels and health goals | Onboarding captures activity level, equipment access, and one active goal. |
-| Protect user privacy by limiting stored personally identifiable information | PII is isolated in a separate store and not mixed with health or analytics tables. |
-| Securely store historical user data and recipe information | Health, recipes, and recommendations are retained and encrypted. |
-| Provide an internal analytics dashboard for the development team | Admin dashboard tracks feature usage, errors, and recommendation quality. |
-| Allow users to set a primary goal such as weight loss, muscle gain, or improved sleep | User profile supports one active goal that may be changed later. |
-| Provide a daily summary of key metrics and next actions | Dashboard defaults to today's metrics and recommendation summaries. |
-| Notify users when important trends are detected | Future phase item. Not included in MVP. |
-| Support dietary styles and restrictions such as vegetarian, vegan, gluten-free, and allergies | Onboarding and meal assistant include dietary styles, allergies, and restrictions. |
-| Allow users to save favorite meals, recipes, and workouts | Users can save recipes and workouts to personal history and favorites. |
-| Allow users to compare their current metrics to previous weeks or months | Dashboard provides historical chart and card comparisons by day, week, and month. |
+| Requirement | Priority | MVP |
+|---|---|---|
+| Accept health signal events via POST /api/events/ingest | P0 | MVP |
+| Supported signal types: sleep_hours, sleep_quality, stress_level, heart_rate, steps, activity_level, check_in_mood, check_in_note | P0 | MVP |
+| Provide a wearable simulator endpoint (POST /api/events/simulate) that generates a realistic signal bundle for a named scenario | P0 | MVP |
+| Provide a manual check-in form in the member UI | P0 | MVP |
+| Persist all raw signal events to wearable_events or behavior_events table | P0 | MVP |
+| Normalize raw events into a normalized_events record before agent dispatch | P0 | MVP |
+| Real Garmin OAuth integration | P2 | Future |
 
-# Explicit Future Phase Items
+**Acceptance criteria:** Submitting a manual check-in or triggering a simulation creates normalized event records and queues an agent run.
 
-- Apple Health integration
-- Push notifications and reminders
-- True webhook-based live sync if Garmin later supports it
-- Duplicate recipe detection
-- Advanced collaborative filtering based on real production users
-- Multi-role admin access
-- Global model retraining based on recommendation feedback
+---
 
-- Full medical-style recovery and risk logic
-- Grocery list generation
-- Persistent conversational memory for the chatbot
+## 4. Agent System — Google ADK
+
+All agents must be implemented as real Google ADK agents using the Python ADK SDK. Do not simulate ADK with plain functions or generic LLM calls.
+
+### 4.1 Agent roster
+
+| Agent | Type | Role |
+|---|---|---|
+| Care Coordinator | Root / SequentialAgent | Orchestrates the full pipeline; dispatches parallel phase, collects results, runs loop, triggers escalation |
+| Signal Interpretation | Specialist (local) | Analyzes normalized signals and produces structured findings (stress_spike, sleep_decline, etc.) |
+| Risk Stratification | Specialist (local) | Assigns risk level (low / moderate / high / critical), urgency, confidence score |
+| Intervention Planning | Specialist (local) | Proposes meal suggestion, activity recommendation, wellness action based on findings and persona |
+| Empathy and Check-In | Specialist (local) | Converts findings into supportive, non-judgmental user-facing language |
+| Validation Loop | LoopAgent | Checks plan for contradictions, policy violations, accessibility mismatches; refines or halts |
+| Student Support Specialist | Remote A2A | Academic stress interpretation, campus resource routing, burnout-sensitive planning |
+| Caregiver Burnout Specialist | Remote A2A | Caregiver burden interpretation, respite resource routing, realistic micro-intervention planning |
+
+### 4.2 Execution model
+
+| Requirement | Priority | MVP |
+|---|---|---|
+| Use ParallelAgent to run Signal Interpretation, Risk Stratification, and Intervention Planning concurrently | P0 | MVP |
+| Use LoopAgent for validation phase (max 3 iterations before forced approval or halt) | P0 | MVP |
+| Coordinator selects the correct A2A specialist based on persona type and dispatches via RemoteA2aAgent | P0 | MVP |
+| Each agent receives a structured input dict and returns a structured output dict | P0 | MVP |
+| Agent must not own persistent state — all reads and writes go through platform service API calls (tools) | P0 | MVP |
+| Every agent run, input, output, and iteration must be persisted to agent_runs and agent_messages tables | P0 | MVP |
+
+**Acceptance criteria:** Running a scenario produces a trace with distinct parallel branch records and at least one loop iteration record. A2A invocation is logged separately from local agent calls.
+
+### 4.3 ADK tool layer
+
+| Tool | Purpose |
+|---|---|
+| ingest_signal_tool | Write normalized event to DB via API |
+| get_user_profile_tool | Read user profile and accessibility preferences |
+| get_recent_signals_tool | Read last N signal events for a user |
+| create_case_tool | Create a support case record |
+| create_intervention_tool | Persist the final intervention plan |
+| send_notification_tool | Write a notification record (no live push in MVP) |
+| get_resources_tool | Look up persona-appropriate resources from a static resource table |
+| persist_audit_tool | Write an audit log entry |
+
+**Acceptance criteria:** No agent constructs a DB query directly. All state changes go through tool calls.
+
+---
+
+## 5. Platform Services (FastAPI)
+
+| Service area | Requirement | Priority |
+|---|---|---|
+| Auth | JWT issue and validation | P0 |
+| User profile | CRUD for user_profiles and accessibility_preferences | P0 |
+| Event ingestion | POST /api/events/ingest, POST /api/events/simulate | P0 |
+| Agent dispatch | POST /api/runs/trigger — kicks off coordinator agent for a user | P0 |
+| Case management | CRUD for cases (create, read, update status) | P0 |
+| Interventions | Write and read intervention records | P0 |
+| Notifications | Write notification records (queued, delivered status) | P1 |
+| Resources | Seeded resource table; GET /api/resources?persona=student | P1 |
+| Trace | GET /api/runs/:id — full trace with agent messages | P0 |
+| Audit log | Append-only audit_logs; no delete endpoint | P1 |
+
+**Acceptance criteria:** All agent tool calls resolve to one of these service endpoints. No agent imports SQLAlchemy directly.
+
+---
+
+## 6. Database Schema
+
+Tables required for MVP:
+
+- `users` — id, email (hashed or pseudonymized), hashed_password, role, created_at
+- `user_profiles` — id, user_id, age_range, sex, height_cm, weight_kg, goal, activity_level, dietary_style, allergies, persona_type, created_at
+- `accessibility_preferences` — user_id, simplified_language, large_text, low_energy_mode
+- `wearable_events` — id, user_id, source (simulated|manual|garmin_future), signal_type, value, unit, recorded_at
+- `behavior_events` — id, user_id, event_type, payload (JSON), recorded_at
+- `normalized_events` — id, user_id, signals (JSON), summary, created_at
+- `agent_runs` — id, user_id, normalized_event_id, status, started_at, completed_at, risk_level
+- `agent_messages` — id, run_id, agent_name, agent_type (local|a2a|parallel|loop), input (JSON), output (JSON), iteration, duration_ms, created_at
+- `cases` — id, user_id, run_id, risk_level, status (open|in_progress|closed), created_at, updated_at
+- `interventions` — id, run_id, user_id, meal_suggestion, activity_suggestion, wellness_action, empathy_message, created_at
+- `notifications` — id, user_id, type, content, status (queued|delivered), created_at
+- `resources` — id, persona_type, category, title, description, url
+- `audit_logs` — id, user_id, action, entity_type, entity_id, metadata (JSON), created_at
+
+**Additional tables proven pattern:**
+- `health_daily_metrics` — user_id, metric_date, steps, step_goal, active_calories, total_calories, resting_hr, avg_hr, body_battery_high, body_battery_low, stress_avg, intensity_minutes_moderate, intensity_minutes_vigorous, floors_climbed, spo2_avg, hrv_weekly_avg, hrv_status, vo2_max, active_minutes, raw_json, synced_at — unique on (user_id, metric_date)
+- `health_sleep_sessions` — user_id, sleep_date, sleep_start, sleep_end, duration_seconds, deep_seconds, light_seconds, rem_seconds, awake_seconds, sleep_score, avg_spo2, avg_respiration, raw_json, synced_at — unique on (user_id, sleep_date)
+- `health_activities` — user_id, garmin_activity_id, activity_type, activity_name, start_time, duration_seconds, distance_meters, calories, avg_hr, max_hr, elevation_gain_meters, avg_speed_mps, training_load, raw_json, synced_at — unique on (user_id, garmin_activity_id)
+- `health_sync_runs` — user_id, status, sync_type, started_at, finished_at, metrics_upserted, activities_upserted, sleep_upserted, error_text, details_json
+- `health_calorie_log` — user_id, log_date, meal_type, food_name, calories, quantity, notes, ai_estimated, created_at
+- `recipes` — user_id, title, description, source_url, our_way_notes, prep_minutes, cook_minutes, servings, tags (JSONB), ingredients (JSONB), instructions (text), photo_filename, created_at
+- `meal_plan_slots` — user_id, plan_date, meal_type, recipe_id (FK nullable), custom_name, notes, created_at
+
+Use Alembic for migrations. Seed data must be committed.
+
+---
+
+## 7. Frontend (Next.js)
+
+| Screen | Required content | Priority |
+|---|---|---|
+| Member dashboard | Current signal summary, most recent support plan (meal, activity, wellness), empathy message, risk badge, link to trace | P0 |
+| Care coordinator dashboard | Open cases list with persona type, risk level, created_at, status; click to view member summary | P0 |
+| Trace / admin dashboard | Agent run list; click run to see full message tree with parallel branches, A2A calls, loop iterations, final action | P0 |
+| Scenario runner | Dropdown of seeded scenarios; trigger button; live status polling; auto-navigate to trace on completion | P0 |
+| Onboarding | Single-page form; redirects to member dashboard on submit | P0 |
+| Manual check-in | Short form (mood, sleep hours, stress level, note); submits signal event and triggers run | P1 |
+
+**Acceptance criteria:** All screens render without error on first load. Trace view clearly distinguishes parallel vs sequential vs A2A vs loop agent messages.
+
+---
+
+## 8. Demo Scenarios (seeded)
+
+Two scenarios must be fully seeded and runnable through the scenario runner:
+
+**Scenario 1: Stressed Student**
+- Signals: sleep 4.5h, stress 8/10, mood negative, 800 steps
+- Expected: Student Support Specialist invoked via A2A; moderate-high risk; campus resource included; case created
+
+**Scenario 2: Exhausted Caregiver**
+- Signals: sleep 5h, stress 9/10, activity low, check-in "completely drained"
+- Expected: Caregiver Burnout Specialist invoked via A2A; high risk; respite resource; coordinator case created; empathy message warm
+
+**Scenario 3 (optional): Older Adult Routine Disruption**
+- Signals: steps very low, sleep fragmented, missed morning check-in
+- Expected: risk elevated; simplified plan; accessibility adaptations applied
+
+---
+
+## 9. Security and Reliability
+
+| Requirement | Priority |
+|---|---|
+| Rate limit AI-triggering endpoints (POST /api/runs/trigger, POST /api/events/simulate) | P1 |
+| Secrets in environment variables only; no hardcoded keys | P0 |
+| Graceful degradation if Gemini API is unavailable (log error, return partial plan) | P1 |
+| Structured JSON logging for all agent calls and tool executions | P1 |
+| Docker Compose local dev with no external service dependencies beyond Gemini API | P0 |
+
+---
+
+## 9b. Garmin Integration (proven pattern)
+
+The Garmin integration already worked end-to-end in Nest. This is a port job. Adapt by replacing `person` column with `user_id` FK and swapping aiosqlite for SQLAlchemy async + PostgreSQL.
+
+| Requirement | Priority |
+|---|---|
+| Garmin OAuth bootstrap: credentials in env vars, MFA-capable, writes oauth1_token + oauth2_token per user to token cache directory | P1 |
+| Background scheduled sync: daily metrics, sleep, activities, upsert into local tables | P1 |
+| Manual sync trigger: POST /api/health/sync | P1 |
+| All health reads come from local DB only — never live from Garmin | P0 |
+| Store: steps, step_goal, active_calories, total_calories, resting_hr, avg_hr, body_battery_high/low, stress_avg, intensity_minutes, floors, spo2_avg, hrv_weekly_avg, hrv_status, vo2_max, active_minutes | P1 |
+| Store sleep: duration, deep/light/rem/awake seconds, sleep_score, avg_spo2, avg_respiration | P1 |
+| Store activities: activity_type, name, start_time, duration, distance, calories, avg_hr, max_hr, training_load | P1 |
+| Sync audit table: status, sync_type, started_at, finished_at, metrics_upserted, error_text | P1 |
+| Garmin auth status endpoint: GET /api/health/garmin/auth-status | P1 |
+| Fallback: if Garmin not connected, app works in manual entry mode | P0 |
+
+**DB tables (adapt `person` → `user_id`):**
+- `health_daily_metrics` — unique on (user_id, metric_date), upsert on sync
+- `health_sleep_sessions` — unique on (user_id, sleep_date)
+- `health_activities` — unique on (user_id, garmin_activity_id)
+- `health_sync_runs` — append-only audit
+- `health_calorie_log` — manual food log with AI estimate support
+
+**Acceptance criteria:** User connects Garmin, sync runs, daily metrics appear in dashboard. If Garmin is disconnected, manual entry still works.
+
+---
+
+## 9c. Recipe Parsing (proven pattern)
+
+The full recipe pipeline already worked in Nest. This is a port job.
+
+| Requirement | Priority |
+|---|---|
+| Import recipe from URL: safe fetch → recipe-scrapers → JSON-LD extraction → grouped ingredient extraction → review UI → save | P1 |
+| Import recipe from pasted text: send to Gemini → structured JSON → normalize → review UI → save | P1 |
+| URL safety: validate scheme/hostname, reject private/local destinations, enforce byte limit | P1 |
+| Instruction extraction priority: JSON-LD recipeInstructions → scraper list → scraper text | P1 |
+| Ingredient extraction priority: known grouped HTML (Tasty Recipes, WP Recipe Maker) → scraper groups → scraper raw | P1 |
+| Quantity splitting: separate leading quantity text from ingredient name via regex | P1 |
+| Recipe photo: support upload and remote image URL import; content-type + magic-byte validation | P2 |
+| Review-before-save: parsed result shown to user for review before writing to DB | P0 |
+| Duplicate detection | P2 (future) |
+
+**DB schema:**
+```
+recipes:
+  id, title, description, source_url, our_way_notes,
+  prep_minutes, cook_minutes, servings, tags (JSON array),
+  ingredients (JSON array of {name, quantity, category, section}),
+  instructions (newline text, ## for section headers),
+  photo_filename, user_id, created_at
+```
+
+**Acceptance criteria:** 90%+ of standard recipe URLs parse successfully. Pasted text produces a reviewable structured result. Grouped ingredients and instruction sections are preserved.
+
+---
+
+## 9d. Recipe Display and Search (proven pattern)
+
+| Requirement | Priority |
+|---|---|
+| Recipe list with text search by title | P1 |
+| Tag chip filtering | P1 |
+| Recipe cards: photo, total time, servings | P1 |
+| Recipe detail: title, image, time, servings, tags, grouped ingredients, grouped instructions, notes, source link | P1 |
+| Ingredient section grouping (section field) | P1 |
+| Instruction section headers (## prefix lines render unnumbered) | P1 |
+| Ingredient reference highlighting in instructions (tap/hover shows quantity) | P2 |
+
+---
+
+## 9e. Meal Planning (proven pattern)
+
+| Requirement | Priority |
+|---|---|
+| Weekly meal plan slots: plan_date + meal_type (breakfast/lunch/dinner/snack) | P2 |
+| Link slot to recipe from recipe catalog | P2 |
+| Custom meal name when no recipe selected | P2 |
+| Display recipe title and description from linked recipe | P2 |
+| Grocery list generation from linked recipe ingredients | P2 |
+
+**DB schema:**
+```
+meal_plan_slots:
+  id, user_id, plan_date, meal_type, recipe_id (FK nullable),
+  custom_name, notes, created_at
+```
+
+---
+
+## 10. Explicit future phase items
+
+- Live Garmin OAuth + webhook sync
+- Recipe parsing from URL
+- Apple Health
+- Push notifications
+- Vector database + semantic search
+- Similar-user clustering
+- Multi-role admin
+- Persistent conversational memory
+- Advanced recovery logic (HRV-based)
+- Senior Wellness and Accessibility Coach A2A specialists
