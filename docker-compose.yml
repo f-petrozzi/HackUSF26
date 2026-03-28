@@ -44,6 +44,42 @@ services:
     depends_on:
       - api
 
+  specialist-student:
+    build:
+      context: ./services/remote_specialists/student_support
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: gemini-2.0-flash
+      API_BASE_URL: http://api:8000
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/.well-known/agent.json || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  specialist-caregiver:
+    build:
+      context: ./services/remote_specialists/caregiver_burnout
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: gemini-2.0-flash
+      API_BASE_URL: http://api:8000
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8002/.well-known/agent.json || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   pgdata:
   garmin_tokens:

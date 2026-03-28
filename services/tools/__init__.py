@@ -5,6 +5,7 @@ from .create_intervention_tool import create_intervention_tool
 from .send_notification_tool import send_notification_tool
 from .get_resources_tool import get_resources_tool
 from .persist_audit_tool import persist_audit_tool
+from .update_run_tool import update_run_tool
 
 __all__ = [
     "get_user_profile_tool",
@@ -14,4 +15,5 @@ __all__ = [
     "send_notification_tool",
     "get_resources_tool",
     "persist_audit_tool",
+    "update_run_tool",
 ]

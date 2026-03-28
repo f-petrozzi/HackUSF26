@@ -6,27 +6,31 @@ API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
 _TIMEOUT = 10.0
 
 
-def get(path: str, params: dict = None, token: str = None) -> dict:
+def _request(method: str, path: str, params: dict = None, body: dict = None, token: str = None) -> dict:
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    try:
-        resp = httpx.get(f"{API_BASE_URL}{path}", params=params, headers=headers, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.ConnectError:
-        # Retry once
-        resp = httpx.get(f"{API_BASE_URL}{path}", params=params, headers=headers, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
+    url = f"{API_BASE_URL}{path}"
+    kwargs = dict(params=params, headers=headers, timeout=_TIMEOUT)
+    if body is not None:
+        kwargs["json"] = body
+
+    for attempt in range(2):
+        try:
+            resp = getattr(httpx, method)(url, **kwargs)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.ConnectError:
+            if attempt == 1:
+                raise
+            # retry once
+
+
+def get(path: str, params: dict = None, token: str = None) -> dict:
+    return _request("get", path, params=params, token=token)
 
 
 def post(path: str, body: dict, token: str = None) -> dict:
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
-    try:
-        resp = httpx.post(f"{API_BASE_URL}{path}", json=body, headers=headers, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.ConnectError:
-        # Retry once
-        resp = httpx.post(f"{API_BASE_URL}{path}", json=body, headers=headers, timeout=_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
+    return _request("post", path, body=body, token=token)
+
+
+def put(path: str, body: dict, token: str = None) -> dict:
+    return _request("put", path, body=body, token=token)
