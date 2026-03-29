@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { submitOnboarding } from "@/lib/api";
 import type { OnboardingRequestDto } from "@/lib/api-contracts";
+import { appConfig } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -56,7 +57,7 @@ export default function OnboardingPage() {
   const [form, setForm] = useState<OnboardingRequestDto>(defaultForm);
   const [allergiesText, setAllergiesText] = useState("");
   const [loading, setLoading] = useState(false);
-  const { setUser } = useAuth();
+  const { user: authUser, setUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -79,7 +80,19 @@ export default function OnboardingPage() {
           .filter(Boolean),
       };
 
-      const user = await submitOnboarding(payload);
+      const user = appConfig.useMockApi
+        ? {
+            ...(authUser ?? {
+              id: "pending",
+              email: "",
+              full_name: "CareMesh User",
+              role: "member" as const,
+            }),
+            persona: payload.persona_type,
+            onboarded: true,
+          }
+        : await submitOnboarding(payload);
+
       setUser(user);
       navigate("/dashboard");
     } catch {

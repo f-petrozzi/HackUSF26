@@ -20,7 +20,6 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 API_DIR = os.path.join(SCRIPT_DIR, "..", "..", "apps", "api")
 sys.path.insert(0, API_DIR)
 
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -34,8 +33,6 @@ from models import (
     UserProfile,
 )
 from settings import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 RESOURCES = [
@@ -77,7 +74,6 @@ DEMO_USERS = [
     # --- Students (3) ---
     {
         "email": "student@caremesh.demo",
-        "password": "demo1234",
         "role": "member",
         "health_preset": "stressed_student",
         "profile": {
@@ -88,7 +84,6 @@ DEMO_USERS = [
     },
     {
         "email": "student2@caremesh.demo",
-        "password": "demo1234",
         "role": "member",
         "health_preset": "stressed_student",
         "profile": {
@@ -99,7 +94,6 @@ DEMO_USERS = [
     },
     {
         "email": "student3@caremesh.demo",
-        "password": "demo1234",
         "role": "member",
         "health_preset": "recovering_student",
         "profile": {
@@ -111,7 +105,6 @@ DEMO_USERS = [
     # --- Caregivers (2) ---
     {
         "email": "caregiver@caremesh.demo",
-        "password": "demo1234",
         "role": "member",
         "health_preset": "exhausted_caregiver",
         "profile": {
@@ -122,7 +115,6 @@ DEMO_USERS = [
     },
     {
         "email": "caregiver2@caremesh.demo",
-        "password": "demo1234",
         "role": "member",
         "health_preset": "exhausted_caregiver",
         "profile": {
@@ -134,7 +126,6 @@ DEMO_USERS = [
     # --- Older adults (2) ---
     {
         "email": "older_adult@caremesh.demo",
-        "password": "demo1234",
         "role": "member",
         "health_preset": "older_adult_disrupted",
         "profile": {
@@ -145,7 +136,6 @@ DEMO_USERS = [
     },
     {
         "email": "older_adult2@caremesh.demo",
-        "password": "demo1234",
         "role": "member",
         "health_preset": "older_adult_stable",
         "profile": {
@@ -157,7 +147,6 @@ DEMO_USERS = [
     # --- Accessibility focused (1) ---
     {
         "email": "accessibility@caremesh.demo",
-        "password": "demo1234",
         "role": "member",
         "health_preset": "accessibility_focused",
         "profile": {
@@ -169,14 +158,12 @@ DEMO_USERS = [
     # --- Staff ---
     {
         "email": "coordinator@caremesh.demo",
-        "password": "demo1234",
         "role": "coordinator",
         "health_preset": None,
         "profile": None,
     },
     {
         "email": "admin@caremesh.demo",
-        "password": "admin1234",
         "role": "admin",
         "health_preset": None,
         "profile": None,
@@ -364,7 +351,6 @@ async def seed(db: AsyncSession) -> None:
         if not user:
             user = User(
                 email=u_data["email"],
-                hashed_password=pwd_context.hash(u_data["password"]),
                 role=u_data["role"],
             )
             db.add(user)

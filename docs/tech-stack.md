@@ -25,7 +25,7 @@ All choices are optimized for hackathon velocity: well-documented, AI-friendly, 
 | ORM | SQLAlchemy 2.0 (async) | Works with both SQLite and PostgreSQL |
 | Schema validation | Pydantic v2 | Shared with ADK agent I/O schemas |
 | Migrations | Alembic | Simple one-command migrations |
-| Auth | python-jose + passlib | JWT issue/validation, bcrypt password hashing |
+| Auth | Clerk + PyJWT verification | Clerk-hosted sign-in with backend session token verification |
 | Database | PostgreSQL (default) / SQLite (local fallback) | PostgreSQL preferred; SQLite acceptable for demo day |
 
 ---
@@ -49,7 +49,7 @@ All choices are optimized for hackathon velocity: well-documented, AI-friendly, 
 |---|---|---|
 | Local dev | Docker Compose | One `docker compose up` starts everything |
 | Services in Compose | `api` (FastAPI), `web` (Next.js), `db` (PostgreSQL), `specialist-student` (A2A server), `specialist-caregiver` (A2A server) | |
-| Environment | `.env` file with Gemini API key, DB URL, JWT secret | |
+| Environment | Doppler or `.env` with Clerk, Gemini, and DB settings | |
 | Cloud target | Google Cloud Run (deployment-ready structure) | Not required for hackathon demo but directory structure should support it |
 
 ---
@@ -71,5 +71,5 @@ All choices are optimized for hackathon velocity: well-documented, AI-friendly, 
 | Redis / Celery | Agent runs are synchronous for MVP; no background queue needed |
 | LangChain / LangGraph | ADK is the framework; mixing orchestration layers creates confusion |
 | Pinecone / pgvector | No semantic search in MVP; plain SQL is sufficient |
-| NextAuth / Auth0 | Simple JWT is faster to implement and fully owned |
+| NextAuth / Auth0 | Clerk is already the chosen auth provider for the product |
 | Prisma | SQLAlchemy is already in Python backend; no need for a second ORM |

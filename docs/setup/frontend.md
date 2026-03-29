@@ -1,8 +1,8 @@
 # Setup — Frontend
 
-Current frontend location: `frontend/`
+Current frontend location: `apps/web/`
 
-The active app is the Vite + React frontend under `frontend/`. The older `apps/web/` references are architectural placeholders, not the current implementation target.
+The active app is the Vite + React frontend under `apps/web/`.
 
 ---
 
@@ -12,8 +12,7 @@ The active app is the Vite + React frontend under `frontend/`. The older `apps/w
 - React Router
 - Tailwind + shadcn/ui
 - React Query data layer
-- Clerk auth in the frontend when the publishable key is present
-- Local auth fallback when Clerk is not configured
+- Clerk-only authentication
 - Mock API mode and live API mode
 
 ---
@@ -23,7 +22,7 @@ The active app is the Vite + React frontend under `frontend/`. The older `apps/w
 Use Doppler in normal development so secrets are injected at runtime:
 
 ```bash
-cd frontend
+cd apps/web
 doppler run -- npm run dev
 ```
 
@@ -40,14 +39,14 @@ VITE_API_URL=http://localhost:8000
 VITE_USE_MOCK_API=true
 ```
 
-If you need local env files temporarily, copy `frontend/.env.example` to `frontend/.env.local`.
+If you need local env files temporarily, copy `apps/web/.env.example` to `apps/web/.env.local`.
 
 ---
 
 ## Running locally
 
 ```bash
-cd frontend
+cd apps/web
 npm install
 doppler run -- npm run dev
 ```
@@ -58,9 +57,10 @@ The Vite dev server runs on `http://localhost:8080`.
 
 ## Auth behavior
 
-- If `VITE_CLERK_PUBLISHABLE_KEY` is set, login and registration use Clerk components.
+- `VITE_CLERK_PUBLISHABLE_KEY` is required. Without it, the app shows a configuration error instead of a local login form.
+- Login and registration use Clerk components only.
 - Onboarding completion is written into Clerk `unsafeMetadata`.
-- If Clerk is not configured, the app falls back to the legacy local auth flow.
+- The frontend does not support password-based local auth anymore.
 
 Live API mode with Clerk now requires matching backend secrets:
 
@@ -89,7 +89,7 @@ Notes:
 - `src/lib/api-mappers.ts`
   Translation between DTOs and UI models.
 - `src/contexts/AuthContext.tsx`
-  Auth abstraction layer across Clerk and local fallback auth.
+  Clerk session sync and frontend auth state.
 
 ---
 

@@ -1,12 +1,5 @@
 import type { PersonaType, RunStatus, RiskLevel, SignalType } from "@/lib/types";
 
-export interface TokenResponseDto {
-  access_token: string;
-  token_type: "bearer";
-  user_id: number;
-  role: "member" | "admin";
-}
-
 export interface AuthMeDto {
   id: number;
   email: string;
@@ -166,16 +159,6 @@ export interface RecipeDto {
   instructions: string;
   photo_filename: string;
   created_at: string;
-}
-
-export interface LoginRequestDto {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequestDto {
-  email: string;
-  password: string;
 }
 
 export interface OnboardingRequestDto {
