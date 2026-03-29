@@ -377,6 +377,18 @@ def _safe_int(val: Any, default: int = 0) -> int:
         return default
 
 
+def _extract_servings(val: Any, default: int = 0) -> int:
+    if val is None:
+        return default
+    parsed = _safe_int(val)
+    if parsed:
+        return parsed
+    match = re.search(r"(\d+)", str(val))
+    if match:
+        return int(match.group(1))
+    return default
+
+
 # ---------------------------------------------------------------------------
 # URL parsing endpoint
 # ---------------------------------------------------------------------------
@@ -477,14 +489,11 @@ async def parse_url(
     servings = 2
     if scraper:
         try:
-            servings = _safe_int(scraper.yields(), 2)
+            servings = _extract_servings(scraper.yields(), 0)
         except Exception:
             pass
     if not servings and jsonld:
-        yield_raw = jsonld.get("recipeYield") or ""
-        m = re.search(r'(\d+)', str(yield_raw))
-        if m:
-            servings = int(m.group(1))
+        servings = _extract_servings(jsonld.get("recipeYield"), 0)
 
     # Instructions — prefer JSON-LD for section preservation
     instructions = ""

@@ -7,7 +7,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.recipes import Recipe
+from routers.recipes import _extract_servings
 from routers.recipes import DEFAULT_TEMPLATE_RECIPES
+
+
+def test_extract_servings_handles_common_scraper_strings():
+    assert _extract_servings("4 servings") == 4
+    assert _extract_servings("Serves 6") == 6
+    assert _extract_servings("Makes 12 cookies") == 12
+    assert _extract_servings(3) == 3
+    assert _extract_servings("unknown", 2) == 2
 
 
 async def test_recommended_recipes_seeds_templates_for_current_user_without_duplicates(

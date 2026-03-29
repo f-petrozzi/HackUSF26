@@ -19,7 +19,11 @@ def _discover_repo_root() -> Path:
     for parent in current.parents:
         if (parent / "services" / "agents").exists():
             return parent
-    return current.parents[2]
+
+    raise RuntimeError(
+        "Cannot locate agents directory. "
+        "Set CAREMESH_REPO_ROOT to the repository root (the directory containing services/agents)."
+    )
 
 
 def _ensure_agents_importable() -> None:
