@@ -87,6 +87,18 @@ export async function refreshSessionUser(fallbackName?: string): Promise<User> {
   return fetchSessionUser(fallbackName);
 }
 
+export interface DemoUserEntry {
+  id: number;
+  email: string;
+  role: string;
+  label: string;
+}
+
+export async function fetchDemoUsers(): Promise<DemoUserEntry[]> {
+  const { data } = await apiClient.get<DemoUserEntry[]>("/api/demo/users");
+  return data;
+}
+
 function mapRunRecord(run: AgentRunDto): AgentRun {
   return {
     id: String(run.id),

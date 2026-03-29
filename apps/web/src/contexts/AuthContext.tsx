@@ -3,9 +3,12 @@ import React, { createContext, useContext, useEffect, useState, type ReactNode }
 import { useAuth as useClerkAuth, useClerk, useUser } from "@clerk/clerk-react";
 
 import { getStoredUser, refreshSessionUser } from "@/lib/api";
-import { clearStoredSession, setAccessTokenProvider, setStoredUser } from "@/lib/api-client";
+import { clearStoredSession, setAccessTokenProvider, setDemoHeader, setStoredUser } from "@/lib/api-client";
 import { appConfig } from "@/lib/config";
 import type { User } from "@/lib/types";
+
+const DEMO_PRIVILEGED_EMAILS = new Set(["petrozzi.fabrizio@gmail.com", "337401@gmail.com"]);
+const DEMO_EMAIL_STORAGE_KEY = "caremesh_demo_as";
 
 interface AuthContextValue {
   user: User | null;
@@ -14,6 +17,11 @@ interface AuthContextValue {
   logout: () => void;
   isLoading: boolean;
   authError: string | null;
+  isDemoMode: boolean;
+  demoEmail: string | null;
+  isPrivilegedUser: boolean;
+  switchDemoUser: (email: string) => void;
+  exitDemo: () => void;
 }
 
 type ClerkUser = NonNullable<ReturnType<typeof useUser>["user"]>;
@@ -25,6 +33,11 @@ const AuthContext = createContext<AuthContextValue>({
   logout: () => {},
   isLoading: true,
   authError: null,
+  isDemoMode: false,
+  demoEmail: null,
+  isPrivilegedUser: false,
+  switchDemoUser: () => {},
+  exitDemo: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -83,11 +96,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [syncAttempt, setSyncAttempt] = useState(0);
+  const [demoEmail, setDemoEmailState] = useState<string | null>(() =>
+    localStorage.getItem(DEMO_EMAIL_STORAGE_KEY),
+  );
+
+  const realUserEmail = clerkUser?.primaryEmailAddress?.emailAddress ?? null;
+  const isPrivilegedUser = DEMO_PRIVILEGED_EMAILS.has(realUserEmail ?? "");
+  const isDemoMode = demoEmail !== null;
 
   useEffect(() => {
     setAccessTokenProvider(appConfig.useMockApi ? null : async () => (await getToken()) || null);
     return () => setAccessTokenProvider(null);
   }, [getToken]);
+
+  // Keep api-client demo header in sync with state
+  useEffect(() => {
+    setDemoHeader(demoEmail);
+  }, [demoEmail]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -131,7 +156,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [clerkUser, isLoaded, syncAttempt]);
+  }, [clerkUser, isLoaded, syncAttempt, demoEmail]);
+
+  const switchDemoUser = (email: string) => {
+    localStorage.setItem(DEMO_EMAIL_STORAGE_KEY, email);
+    setDemoHeader(email);
+    setDemoEmailState(email);
+    setSyncAttempt((n) => n + 1);
+  };
+
+  const exitDemo = () => {
+    localStorage.removeItem(DEMO_EMAIL_STORAGE_KEY);
+    setDemoHeader(null);
+    setDemoEmailState(null);
+    setSyncAttempt((n) => n + 1);
+  };
 
   const setUser = (nextUser: User | null) => {
     if (!nextUser) {
@@ -178,6 +217,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         isLoading: !isLoaded || isSyncing,
         authError,
+        isDemoMode,
+        demoEmail,
+        isPrivilegedUser,
+        switchDemoUser,
+        exitDemo,
       }}
     >
       {children}
