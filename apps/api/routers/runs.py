@@ -21,7 +21,7 @@ from database import get_db
 from models.agents import AgentMessage, AgentRun, Case, Intervention
 from models.events import NormalizedEvent
 from models.user import User, UserProfile
-from run_dispatch import coordinator_api_base_url
+from run_dispatch import coordinator_api_base_url, coordinator_auth_header
 from schemas.agents import AgentMessageOut, AgentRunOut, RunTraceOut, TriggerRunRequest
 
 
@@ -136,7 +136,7 @@ async def trigger_run(
         run_coordinator_for_run,
         user_id=user.id,
         run_id=run.id,
-        auth_header=request.headers.get("authorization", ""),
+        auth_header=coordinator_auth_header(request),
         api_base_url=coordinator_api_base_url(request),
         demo_as=request.headers.get("x-demo-as", ""),
         scenario="live",
