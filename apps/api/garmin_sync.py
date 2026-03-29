@@ -362,7 +362,7 @@ async def _sync_daily_for_date(
     now = datetime.now(timezone.utc)
     stmt = pg_insert(HealthDailyMetrics).values(
         user_id=user_id,
-        metric_date=date_str,
+        metric_date=date.fromisoformat(date_str),
         steps=merged["steps"],
         step_goal=merged["step_goal"],
         active_calories=merged["active_calories"],
@@ -428,7 +428,7 @@ async def _sync_sleep_for_date(
     now = datetime.now(timezone.utc)
     stmt = pg_insert(HealthSleepSession).values(
         user_id=user_id,
-        sleep_date=date_str,
+        sleep_date=date.fromisoformat(date_str),
         sleep_start=extracted.get("sleep_start", ""),
         sleep_end=extracted.get("sleep_end", ""),
         duration_seconds=extracted.get("duration_seconds", 0),
@@ -587,14 +587,14 @@ async def _emit_health_snapshot_event(db: AsyncSession, user_id: int, date_str: 
     """Write a NormalizedEvent summarising today's health metrics for the agent layer."""
     result = await db.execute(
         select(HealthDailyMetrics)
-        .where(HealthDailyMetrics.user_id == user_id, HealthDailyMetrics.metric_date == date_str)
+        .where(HealthDailyMetrics.user_id == user_id, HealthDailyMetrics.metric_date == date.fromisoformat(date_str))
         .limit(1)
     )
     metrics = result.scalar_one_or_none()
 
     sleep_result = await db.execute(
         select(HealthSleepSession)
-        .where(HealthSleepSession.user_id == user_id, HealthSleepSession.sleep_date == date_str)
+        .where(HealthSleepSession.user_id == user_id, HealthSleepSession.sleep_date == date.fromisoformat(date_str))
         .limit(1)
     )
     sleep = sleep_result.scalar_one_or_none()
