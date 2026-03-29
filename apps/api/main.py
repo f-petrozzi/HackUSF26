@@ -3,8 +3,13 @@ CareMesh API — main FastAPI application.
 """
 from __future__ import annotations
 
+from runtime_env import configure_runtime_env
+
+configure_runtime_env()
+
 import logging
 from contextlib import asynccontextmanager
+from datetime import timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,7 +39,7 @@ async def lifespan(app: FastAPI):
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
         from garmin_sync import run_scheduled_sync
 
-        scheduler = AsyncIOScheduler()
+        scheduler = AsyncIOScheduler(timezone=timezone.utc)
         scheduler.add_job(
             run_scheduled_sync,
             "interval",

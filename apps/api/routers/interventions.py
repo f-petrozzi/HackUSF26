@@ -19,6 +19,7 @@ class InterventionCreate(BaseModel):
     activity_suggestion: str = ""
     wellness_action: str = ""
     empathy_message: str = ""
+    meal_constraints: List[str] = []
 
 router = APIRouter(prefix="/api/interventions", tags=["interventions"])
 
@@ -36,6 +37,7 @@ async def create_intervention(
         activity_suggestion=body.activity_suggestion,
         wellness_action=body.wellness_action,
         empathy_message=body.empathy_message,
+        meal_constraints=body.meal_constraints,
     )
     db.add(intervention)
     await db.commit()

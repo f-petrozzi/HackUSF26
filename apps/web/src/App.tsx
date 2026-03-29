@@ -20,14 +20,35 @@ import CheckInPage from "@/pages/CheckInPage";
 import RecipeListPage from "@/pages/RecipeListPage";
 import RecipeDetailPage from "@/pages/RecipeDetailPage";
 import NotFound from "@/pages/NotFound";
+import type { User } from "@/lib/types";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function isStaff(user: User | null | undefined) {
+  return user?.role === "coordinator" || user?.role === "admin";
+}
+
+function getHomeRoute(user: User | null | undefined) {
+  if (!user) return "/login";
+  if (user.role === "admin") return "/traces";
+  if (user.role === "coordinator") return "/coordinator";
+  return user.onboarded ? "/dashboard" : "/onboarding";
+}
+
+function MemberRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== "admin" && !user.onboarded) return <Navigate to="/onboarding" replace />;
+  if (user.role !== "member") return <Navigate to={getHomeRoute(user)} replace />;
+  if (!user.onboarded) return <Navigate to="/onboarding" replace />;
+  return <AppLayout>{children}</AppLayout>;
+}
+
+function StaffRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isStaff(user)) return <Navigate to={getHomeRoute(user)} replace />;
   return <AppLayout>{children}</AppLayout>;
 }
 
@@ -35,7 +56,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== "admin") return <Navigate to="/dashboard" replace />;
+  if (user.role !== "admin") return <Navigate to={getHomeRoute(user)} replace />;
   return <AppLayout>{children}</AppLayout>;
 }
 
@@ -70,19 +91,19 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login/*" element={user ? <Navigate to={user.role === "admin" ? "/coordinator" : user.onboarded ? "/dashboard" : "/onboarding"} /> : <LoginPage />} />
-      <Route path="/register/*" element={user ? <Navigate to={user.role === "admin" ? "/coordinator" : user.onboarded ? "/dashboard" : "/onboarding"} /> : <RegisterPage />} />
-      <Route path="/onboarding" element={user ? (user.role === "admin" || user.onboarded ? <Navigate to={user.role === "admin" ? "/coordinator" : "/dashboard"} replace /> : <OnboardingPage />) : <Navigate to="/login" />} />
-      <Route path="/dashboard" element={<ProtectedRoute><MemberDashboard /></ProtectedRoute>} />
-      <Route path="/health" element={<ProtectedRoute><HealthDashboard /></ProtectedRoute>} />
-      <Route path="/check-in" element={<ProtectedRoute><CheckInPage /></ProtectedRoute>} />
-      <Route path="/recipes" element={<ProtectedRoute><RecipeListPage /></ProtectedRoute>} />
-      <Route path="/recipes/:id" element={<ProtectedRoute><RecipeDetailPage /></ProtectedRoute>} />
-      <Route path="/coordinator" element={<AdminRoute><CoordinatorDashboard /></AdminRoute>} />
+      <Route path="/login/*" element={user ? <Navigate to={getHomeRoute(user)} /> : <LoginPage />} />
+      <Route path="/register/*" element={user ? <Navigate to={getHomeRoute(user)} /> : <RegisterPage />} />
+      <Route path="/onboarding" element={user ? (user.role !== "member" || user.onboarded ? <Navigate to={getHomeRoute(user)} replace /> : <OnboardingPage />) : <Navigate to="/login" />} />
+      <Route path="/dashboard" element={<MemberRoute><MemberDashboard /></MemberRoute>} />
+      <Route path="/health" element={<MemberRoute><HealthDashboard /></MemberRoute>} />
+      <Route path="/check-in" element={<MemberRoute><CheckInPage /></MemberRoute>} />
+      <Route path="/recipes" element={<MemberRoute><RecipeListPage /></MemberRoute>} />
+      <Route path="/recipes/:id" element={<MemberRoute><RecipeDetailPage /></MemberRoute>} />
+      <Route path="/coordinator" element={<StaffRoute><CoordinatorDashboard /></StaffRoute>} />
       <Route path="/scenarios" element={<AdminRoute><ScenarioRunner /></AdminRoute>} />
       <Route path="/traces" element={<AdminRoute><TracesListPage /></AdminRoute>} />
       <Route path="/traces/:runId" element={<AdminRoute><TraceView /></AdminRoute>} />
-      <Route path="/" element={<Navigate to={user ? (user.role === "admin" ? "/coordinator" : user.onboarded ? "/dashboard" : "/onboarding") : "/login"} replace />} />
+      <Route path="/" element={<Navigate to={getHomeRoute(user)} replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

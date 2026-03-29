@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupportPlan, getRecentSignals } from "@/lib/api";
+import { getRecentSignals, getRuns, getSupportPlan } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import { UtensilsCrossed, Footprints, Sparkles, TrendingDown, TrendingUp, Moon, Brain, Heart as HeartIcon, Activity } from "lucide-react";
@@ -28,14 +28,35 @@ const cardLabels = ["Meal", "Activity", "Wellness"];
 
 export default function MemberDashboard() {
   const { user } = useAuth();
-  const { data: plan } = useQuery({ queryKey: ["supportPlan"], queryFn: getSupportPlan });
+  const { data: runs } = useQuery({
+    queryKey: ["runs"],
+    queryFn: getRuns,
+    refetchInterval: (query) => {
+      const latestRun = (query.state.data ?? [])[0];
+      return latestRun && (latestRun.status === "pending" || latestRun.status === "running") ? 2000 : false;
+    },
+  });
+  const latestRun = runs?.[0];
+  const awaitingLatestPlan = latestRun?.status === "pending" || latestRun?.status === "running";
+  const { data: plan } = useQuery({
+    queryKey: ["supportPlan", latestRun?.id ?? "none", latestRun?.status ?? "idle"],
+    queryFn: getSupportPlan,
+    refetchInterval: awaitingLatestPlan ? 2000 : false,
+  });
   const { data: signals } = useQuery({ queryKey: ["signals"], queryFn: getRecentSignals });
 
   if (!plan) return <DashboardSkeleton />;
 
-  const risk = riskConfig[plan.risk_level];
-  const interventions = [plan.meal, plan.activity, plan.wellness];
-  const confidenceLabel = typeof plan.confidence === "number" ? ` · ${Math.round(plan.confidence * 100)}% confidence` : "";
+  const displayPlan = awaitingLatestPlan
+    ? {
+        ...plan,
+        empathy_message: "We’re generating your latest support plan now. This dashboard will update automatically when the run completes.",
+      }
+    : plan;
+
+  const risk = riskConfig[displayPlan.risk_level];
+  const interventions = [displayPlan.meal, displayPlan.activity, displayPlan.wellness];
+  const confidenceLabel = typeof displayPlan.confidence === "number" ? ` · ${Math.round(displayPlan.confidence * 100)}% confidence` : "";
 
   return (
     <div className="p-6 lg:p-10 max-w-5xl mx-auto space-y-8">
@@ -57,7 +78,7 @@ export default function MemberDashboard() {
         animate={{ opacity: 1, y: 0 }}
         className="p-5 rounded-xl bg-accent border border-primary/10"
       >
-        <p className="text-sm leading-relaxed text-accent-foreground">{plan.empathy_message}</p>
+        <p className="text-sm leading-relaxed text-accent-foreground">{displayPlan.empathy_message}</p>
       </motion.div>
 
       {/* Signal Chips */}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { submitCheckIn } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,18 @@ export default function CheckInPage() {
   const [stress, setStress] = useState(30);
   const [note, setNote] = useState("");
   const navigate = useNavigate();
+  const qc = useQueryClient();
 
   const submit = useMutation({
     mutationFn: submitCheckIn,
-    onSuccess: (run) => navigate(`/traces/${run.id}`),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["runs"] }),
+        qc.invalidateQueries({ queryKey: ["supportPlan"] }),
+        qc.invalidateQueries({ queryKey: ["signals"] }),
+      ]);
+      navigate("/dashboard");
+    },
   });
 
   const moodLabels = ["😞", "😕", "😐", "🙂", "😊"];

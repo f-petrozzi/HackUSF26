@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from settings import settings
 
-engine = create_async_engine(
-    settings.database_url,
-    pool_size=10,
-    max_overflow=20,
-    echo=False,
-)
+_engine_kwargs: dict = {"echo": False}
+if not settings.database_url.startswith("sqlite"):
+    _engine_kwargs["pool_size"] = 10
+    _engine_kwargs["max_overflow"] = 20
+
+engine = create_async_engine(settings.database_url, **_engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 

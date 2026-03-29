@@ -63,7 +63,23 @@ Authentication is handled by Clerk. The API does not expose local password login
    "value": "8", "unit": "1-10", "recorded_at": "..." }]
 ```
 
-### POST /api/events/ingest
+### POST /api/events/checkin  ← preferred for manual check-ins
+Atomic: creates raw wearable events + normalized event + agent run. Returns AgentRun so the
+frontend can navigate directly to the trace.
+```json
+// Request
+{
+  "mood": 7,           // 1-10
+  "sleep_hours": 6.5,  // 0-12
+  "stress": 70,        // 0-100 (frontend percentage; stored as 1-10 internally)
+  "note": "Feeling tired"  // optional
+}
+// Response 201 — AgentRun
+{ "id": 3, "user_id": 1, "normalized_event_id": 5, "status": "pending",
+  "started_at": "...", "completed_at": null, "risk_level": "" }
+```
+
+### POST /api/events/ingest  ← raw single-signal ingestion (no normalization, no run)
 ```json
 // Request
 {
@@ -109,6 +125,10 @@ Authentication is handled by Clerk. The API does not expose local password login
 ## Agent Runs
 
 ### POST /api/runs/trigger
+`normalized_event_id` is **required**. Returns 422 if absent/null. Returns 404 if the event
+does not exist or belongs to a different user. Prefer `POST /api/events/checkin` for check-ins
+and `POST /api/scenarios/{id}/run` for scenario runner — use this endpoint only when you already
+have a normalized event ID and want to re-trigger a run.
 ```json
 // Request
 { "normalized_event_id": 1 }

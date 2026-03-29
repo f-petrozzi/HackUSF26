@@ -23,7 +23,14 @@ def _load_dotenv(path: Path) -> None:
 
 @dataclass(frozen=True)
 class Settings:
-    gemini_api_key: str = ""
+    azure_openai_api_key: str = ""
+    openai_api_key: str = ""
+    azure_openai_endpoint: str = ""
+    openai_base_url: str = ""
+    azure_openai_api_version: str = ""
+    openai_api_version: str = ""
+    azure_openai_deployment: str = ""
+    openai_model: str = ""
     api_base_url: str = "http://localhost:8000"
     student_specialist_url: str = "http://localhost:8001"
     caregiver_specialist_url: str = "http://localhost:8002"
@@ -32,7 +39,14 @@ class Settings:
 def load_settings() -> Settings:
     _load_dotenv(ENV_PATH)
     return Settings(
-        gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
+        azure_openai_api_key=os.getenv("AZURE_OPENAI_API_KEY", ""),
+        openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+        azure_openai_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
+        openai_base_url=os.getenv("OPENAI_BASE_URL", ""),
+        azure_openai_api_version=os.getenv("AZURE_OPENAI_API_VERSION", ""),
+        openai_api_version=os.getenv("OPENAI_API_VERSION", ""),
+        azure_openai_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT", ""),
+        openai_model=os.getenv("OPENAI_MODEL", ""),
         api_base_url=os.getenv("API_BASE_URL", "http://localhost:8000"),
         student_specialist_url=os.getenv(
             "STUDENT_SPECIALIST_URL", "http://localhost:8001"

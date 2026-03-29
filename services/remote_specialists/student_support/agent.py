@@ -23,7 +23,11 @@ Output:
 
 root_agent = LlmAgent(
     name="StudentSupportSpecialist",
-    model=os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
+    model=(
+        os.environ.get("OPENAI_MODEL")
+        or os.environ.get("AZURE_OPENAI_DEPLOYMENT")
+        or "gpt-4.1-mini"
+    ),
     instruction=SYSTEM_PROMPT,
     description=(
         "Remote A2A specialist for students. Enriches intervention plans with "

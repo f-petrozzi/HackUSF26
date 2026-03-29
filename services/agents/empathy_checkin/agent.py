@@ -2,12 +2,12 @@ from __future__ import annotations
 
 try:
     from services.agents.adk_compat import LlmAgent
-    from services.agents.llm_utils import GeminiJsonClient, build_json_prompt
+    from services.agents.llm_utils import OpenAIJsonClient, build_json_prompt
     from services.agents.prompts import EMPATHY_CHECKIN_PROMPT
     from services.agents.schemas import EmpathyResult
 except ImportError:
     from adk_compat import LlmAgent
-    from llm_utils import GeminiJsonClient, build_json_prompt
+    from llm_utils import OpenAIJsonClient, build_json_prompt
     from prompts import EMPATHY_CHECKIN_PROMPT
     from schemas import EmpathyResult
 
@@ -18,7 +18,7 @@ class EmpathyCheckinAgent:
             name="EmpathyCheckin",
             instruction=EMPATHY_CHECKIN_PROMPT,
         )
-        self._llm = GeminiJsonClient()
+        self._llm = OpenAIJsonClient()
 
     def run(self, *, risk_level: str, persona_type: str, signal_summary: str) -> dict:
         llm_result = self._generate_with_llm(

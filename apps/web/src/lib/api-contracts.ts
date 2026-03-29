@@ -3,7 +3,7 @@ import type { PersonaType, RunStatus, RiskLevel, SignalType } from "@/lib/types"
 export interface AuthMeDto {
   id: number;
   email: string;
-  role: "member" | "admin";
+  role: "member" | "coordinator" | "admin";
   has_profile: boolean;
 }
 
@@ -55,6 +55,10 @@ export interface AgentRunDto {
   started_at: string;
   completed_at: string | null;
   risk_level: RiskLevel | "";
+  member_label?: string | null;
+  member_email?: string | null;
+  persona_type?: PersonaType | null;
+  summary?: string | null;
 }
 
 export interface AgentMessageDto {
@@ -72,6 +76,8 @@ export interface AgentMessageDto {
 export interface RunTraceDto {
   run: AgentRunDto;
   messages: AgentMessageDto[];
+  intervention?: InterventionDto | null;
+  case?: CaseDto | null;
 }
 
 export interface CaseDto {
@@ -82,6 +88,10 @@ export interface CaseDto {
   status: "open" | "in_progress" | "closed";
   created_at: string;
   updated_at: string;
+  member_label?: string | null;
+  member_email?: string | null;
+  persona_type?: PersonaType | null;
+  summary?: string | null;
 }
 
 export interface InterventionDto {
@@ -92,6 +102,7 @@ export interface InterventionDto {
   activity_suggestion: string;
   wellness_action: string;
   empathy_message: string;
+  meal_constraints?: string[];
   created_at: string;
 }
 
@@ -146,7 +157,7 @@ export interface RecipeIngredientDto {
 
 export interface RecipeDto {
   id: number;
-  user_id: number;
+  user_id: number | null;
   title: string;
   description: string;
   source_url: string;
@@ -159,6 +170,19 @@ export interface RecipeDto {
   instructions: string;
   photo_filename: string;
   created_at: string;
+}
+
+export interface ParsedRecipeDto {
+  title: string;
+  description: string;
+  source_url: string;
+  prep_minutes: number;
+  cook_minutes: number;
+  servings: number;
+  tags: string[];
+  ingredients: RecipeIngredientDto[];
+  instructions: string;
+  photo_url: string;
 }
 
 export interface OnboardingRequestDto {
@@ -181,4 +205,90 @@ export interface CheckInSubmission {
   sleep_hours: number;
   stress: number;
   note: string;
+}
+
+export interface GarminAuthStatusDto {
+  connected: boolean;
+  user_id: number | null;
+  garmin_email: string | null;
+  last_sync: string | null;
+}
+
+export interface DailyMetricsDto {
+  id: number;
+  user_id: number;
+  metric_date: string;
+  steps: number;
+  step_goal: number;
+  active_calories: number;
+  total_calories: number;
+  resting_hr: number;
+  avg_hr: number;
+  body_battery_high: number;
+  body_battery_low: number;
+  stress_avg: number;
+  intensity_minutes_moderate: number;
+  intensity_minutes_vigorous: number;
+  floors_climbed: number;
+  spo2_avg: number;
+  hrv_weekly_avg: number;
+  hrv_status: string;
+  vo2_max: number;
+  active_minutes: number;
+  synced_at: string;
+}
+
+export interface SleepSessionDto {
+  id: number;
+  user_id: number;
+  sleep_date: string;
+  sleep_start: string;
+  sleep_end: string;
+  duration_seconds: number;
+  deep_seconds: number;
+  light_seconds: number;
+  rem_seconds: number;
+  awake_seconds: number;
+  sleep_score: number;
+  avg_spo2: number;
+  avg_respiration: number;
+  synced_at: string;
+}
+
+export interface ActivityDto {
+  id: number;
+  user_id: number;
+  garmin_activity_id: string;
+  activity_type: string;
+  activity_name: string;
+  start_time: string;
+  duration_seconds: number;
+  distance_meters: number;
+  calories: number;
+  avg_hr: number;
+  max_hr: number;
+  elevation_gain_meters: number;
+  avg_speed_mps: number;
+  training_load: number;
+  synced_at: string;
+}
+
+export interface CalorieLogDto {
+  id: number;
+  user_id: number;
+  log_date: string;
+  meal_type: string;
+  food_name: string;
+  calories: number;
+  quantity: string;
+  notes: string;
+  ai_estimated: boolean;
+  created_at: string;
+}
+
+export interface CalorieEstimateDto {
+  food_name: string;
+  quantity: string;
+  estimated_calories: number;
+  confidence: string;
 }

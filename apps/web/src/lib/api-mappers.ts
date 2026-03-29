@@ -15,6 +15,7 @@ import type {
   AgentName,
   AgentRun,
   Case,
+  FinalAction,
   HealthSummary,
   InterventionCard,
   PersonaType,
@@ -204,6 +205,12 @@ export function mapRunTrace(trace: RunTraceDto): AgentRun {
     started_at: trace.run.started_at,
     completed_at: trace.run.completed_at || undefined,
     risk_level: trace.run.risk_level || undefined,
+    member_label: trace.run.member_label || undefined,
+    member_email: trace.run.member_email || undefined,
+    persona: normalizePersona(trace.run.persona_type || undefined),
+    summary: trace.run.summary || undefined,
+    final_action: trace.intervention ? mapFinalAction(trace.intervention) : undefined,
+    case: trace.case ? mapCase(trace.case) : undefined,
     messages: trace.messages.map(mapAgentMessage),
   };
 }
@@ -212,11 +219,24 @@ export function mapCase(dto: CaseDto): Case {
   return {
     id: String(dto.id),
     user_id: String(dto.user_id),
+    run_id: toStringId(dto.run_id),
+    member_label: dto.member_label || undefined,
+    member_email: dto.member_email || undefined,
+    persona: normalizePersona(dto.persona_type || undefined),
     risk_level: dto.risk_level,
     status: dto.status,
-    summary: dto.run_id ? `Follow-up case created from run #${dto.run_id}` : `Follow-up case for member #${dto.user_id}`,
+    summary: dto.summary || (dto.run_id ? `Follow-up case created from run #${dto.run_id}` : `Follow-up case for member #${dto.user_id}`),
     created_at: dto.created_at,
     updated_at: dto.updated_at,
+  };
+}
+
+function mapFinalAction(intervention: InterventionDto): FinalAction {
+  return {
+    meal_suggestion: intervention.meal_suggestion,
+    activity_suggestion: intervention.activity_suggestion,
+    wellness_action: intervention.wellness_action,
+    empathy_message: intervention.empathy_message,
   };
 }
 

@@ -25,6 +25,10 @@ const memberLinks = [
 
 const coordinatorLinks = [
   { to: "/coordinator", label: "Cases", icon: Users },
+];
+
+const adminLinks = [
+  { to: "/coordinator", label: "Cases", icon: Users },
   { to: "/scenarios", label: "Scenarios", icon: FlaskConical },
   { to: "/traces", label: "Traces", icon: Network },
 ];
@@ -34,8 +38,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isCoordinator = user?.role === "admin";
-  const links = isCoordinator ? [...memberLinks, ...coordinatorLinks] : memberLinks;
+  const links =
+    user?.role === "admin"
+      ? adminLinks
+      : user?.role === "coordinator"
+        ? coordinatorLinks
+        : memberLinks;
 
   const handleLogout = () => {
     logout();

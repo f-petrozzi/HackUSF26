@@ -10,7 +10,7 @@ Agents do not own state. Agents read from and write to platform services via ADK
 
 ---
 
-## Layer 1: Experience Layer (Next.js)
+## Layer 1: Experience Layer (Vite/React SPA)
 
 Four screens:
 
@@ -194,7 +194,7 @@ Frontend polls /api/runs/:id → displays trace + plan
 ```
 /
   apps/
-    web/                    ← Next.js frontend
+    web/                    ← Vite/React SPA frontend
     api/                    ← FastAPI backend
   services/
     agents/
@@ -225,5 +225,5 @@ Frontend polls /api/runs/:id → displays trace + plan
 1. **Agents are not the system of record.** Agents interpret, recommend, and trigger. FastAPI services persist and enforce policy.
 2. **Every sensitive action is policy-gated.** Case creation, notifications, and escalation check consent and risk thresholds via tool logic.
 3. **Traceability is first-class.** Every agent message is persisted. The trace UI is a core deliverable, not an afterthought.
-4. **Use real ADK primitives.** `ParallelAgent`, `LoopAgent`, and `RemoteA2aAgent` must be used as designed — not replaced with custom orchestration logic.
+4. **ADK-aligned structure.** Code is organized around `ParallelAgent`, `LoopAgent`, and `RemoteA2aAgent` naming and structure. Current execution uses a custom Python orchestrator (`execute_parallel` via `ThreadPoolExecutor`, direct Gemini API via `GeminiJsonClient`, HTTP `httpx` for A2A). `adk_compat.py` bridges to real Google ADK when the SDK is installed — real ADK runtime is a planned upgrade.
 5. **Demo-first scope.** Every architectural decision is validated against: "can this be demonstrated in 30 seconds to a judge?"

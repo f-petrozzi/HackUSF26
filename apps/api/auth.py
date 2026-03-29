@@ -11,6 +11,7 @@ from database import get_db
 from models.user import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
+STAFF_ROLES = {"coordinator", "admin"}
 
 
 async def get_current_user(
@@ -26,7 +27,21 @@ async def get_current_user(
     return await get_or_create_clerk_user(claims, db)
 
 
+def is_admin(user: User) -> bool:
+    return user.role == "admin"
+
+
+def is_staff(user: User) -> bool:
+    return user.role in STAFF_ROLES
+
+
 async def get_current_admin(user: User = Depends(get_current_user)) -> User:
-    if user.role != "admin":
+    if not is_admin(user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin required")
+    return user
+
+
+async def get_current_coordinator(user: User = Depends(get_current_user)) -> User:
+    if not is_staff(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Coordinator or admin required")
     return user

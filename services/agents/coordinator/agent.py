@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import datetime, timezone
 import httpx
 from typing import Any, Dict, List
@@ -7,7 +8,7 @@ from typing import Any, Dict, List
 try:
     from services.agents.adk_compat import ParallelAgent, RemoteA2aAgent, SequentialAgent
     from services.agents.config import Settings
-    from services.agents.llm_utils import GeminiJsonClient, build_json_prompt
+    from services.agents.llm_utils import OpenAIJsonClient, build_json_prompt
     from services.agents.prompts import CARE_COORDINATOR_PROMPT
     from services.agents.runtime import AgentType, TraceRecorder, execute_parallel
     from services.agents.schemas import FinalPlan, SpecialistResult
@@ -21,7 +22,7 @@ try:
 except ImportError:
     from adk_compat import ParallelAgent, RemoteA2aAgent, SequentialAgent
     from config import Settings
-    from llm_utils import GeminiJsonClient, build_json_prompt
+    from llm_utils import OpenAIJsonClient, build_json_prompt
     from prompts import CARE_COORDINATOR_PROMPT
     from runtime import AgentType, TraceRecorder, execute_parallel
     from schemas import FinalPlan, SpecialistResult
@@ -60,7 +61,7 @@ class CareCoordinatorPipeline:
             ],
         )
         self.prompt = CARE_COORDINATOR_PROMPT
-        self._llm = GeminiJsonClient()
+        self._llm = OpenAIJsonClient()
 
     def _specialist_for(self, persona_type: str) -> RemoteA2aAgent | None:
         if persona_type == "student":
@@ -203,6 +204,16 @@ class CareCoordinatorPipeline:
             generation_error=result.error,
         ).model_dump()
 
+    @staticmethod
+    def _merge_plan_patch(base: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
+        merged = deepcopy(base)
+        for key, value in patch.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = CareCoordinatorPipeline._merge_plan_patch(merged[key], value)
+            else:
+                merged[key] = deepcopy(value)
+        return merged
+
     def run(self, *, user_id: str, scenario: str, run_id: int = 1) -> Dict[str, Any]:
         recorder = TraceRecorder(run_id=run_id, tool_provider=self.tool_provider)
         inferred_persona = "student" if scenario == "stressed_student" else (
@@ -300,8 +311,8 @@ class CareCoordinatorPipeline:
                 output_payload=entry["output"],
                 iteration=entry["iteration"],
             )
-        if validation_result.get("revised_plan"):
-            draft_plan = validation_result["revised_plan"]
+        if validation_result.get("revised_plan") is not None:
+            draft_plan = self._merge_plan_patch(draft_plan, validation_result["revised_plan"])
 
         final_plan = FinalPlan(
             meal_suggestion=draft_plan["meal_suggestion"]["description"],
@@ -322,6 +333,7 @@ class CareCoordinatorPipeline:
             "activity_suggestion": final_plan["activity_suggestion"],
             "wellness_action": final_plan["wellness_action"],
             "empathy_message": final_plan["empathy_message"],
+            "meal_constraints": draft_plan.get("meal_constraints", []),
         }
         intervention_record = self.tool_provider.create_intervention(intervention_payload)
         case_record = None

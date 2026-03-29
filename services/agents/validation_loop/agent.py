@@ -5,12 +5,12 @@ from typing import Any, Dict, List, Tuple
 
 try:
     from services.agents.adk_compat import LlmAgent, LoopAgent
-    from services.agents.llm_utils import GeminiJsonClient, build_json_prompt
+    from services.agents.llm_utils import OpenAIJsonClient, build_json_prompt
     from services.agents.prompts import VALIDATION_LOOP_PROMPT
     from services.agents.schemas import ValidationResult
 except ImportError:
     from adk_compat import LlmAgent, LoopAgent
-    from llm_utils import GeminiJsonClient, build_json_prompt
+    from llm_utils import OpenAIJsonClient, build_json_prompt
     from prompts import VALIDATION_LOOP_PROMPT
     from schemas import ValidationResult
 
@@ -23,7 +23,7 @@ class ValidationLoopAgent:
             sub_agent=self.validator,
             max_iterations=3,
         )
-        self._llm = GeminiJsonClient()
+        self._llm = OpenAIJsonClient()
 
     def validate(
         self,
@@ -36,7 +36,8 @@ class ValidationLoopAgent:
     ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
         current_plan = deepcopy(intervention_plan)
         iterations: List[Dict[str, Any]] = []
-        low_energy_mode = user_profile.get("accessibility", {}).get("low_energy_mode", False)
+        low_energy_mode = (user_profile.get("accessibility") or {}).get("low_energy_mode", False)
+        plan_changed = False
 
         for iteration in range(1, 4):
             llm_result = self._generate_with_llm(
@@ -57,6 +58,20 @@ class ValidationLoopAgent:
                     iteration=iteration,
                     generation_error=(llm_result or {}).get("generation_error", ""),
                 )
+
+            if result.get("revised_plan") is not None:
+                current_plan = self._merge_plan(current_plan, result["revised_plan"])
+                result = {
+                    **result,
+                    "revised_plan": deepcopy(current_plan),
+                }
+                plan_changed = True
+            elif plan_changed and (result["approved"] or result["halt"]):
+                result = {
+                    **result,
+                    "revised_plan": deepcopy(current_plan),
+                }
+
             iterations.append(
                 {
                     "iteration": iteration,
@@ -71,10 +86,18 @@ class ValidationLoopAgent:
             )
             if result["approved"] or result["halt"]:
                 return result, iterations
-            if result.get("revised_plan"):
-                current_plan = deepcopy(result["revised_plan"])
 
         return result, iterations
+
+    @staticmethod
+    def _merge_plan(base: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
+        merged = deepcopy(base)
+        for key, value in patch.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = ValidationLoopAgent._merge_plan(merged[key], value)
+            else:
+                merged[key] = deepcopy(value)
+        return merged
 
     def _generate_with_llm(
         self,
@@ -97,7 +120,28 @@ class ValidationLoopAgent:
                         "suggested_fix": "how to fix",
                     }
                 ],
-                "revised_plan": {"notes": "optional revised plan object"} ,
+                "revised_plan": {
+                    "meal_suggestion": {
+                        "title": "short title",
+                        "description": "1-2 sentence meal suggestion",
+                        "rationale": "why this meal fits the condition",
+                    },
+                    "activity_suggestion": {
+                        "title": "short title",
+                        "description": "1-2 sentence activity suggestion",
+                        "duration_minutes": 10,
+                        "intensity": "very_low | low | moderate",
+                        "rationale": "why this activity fits the condition",
+                    },
+                    "wellness_action": {
+                        "title": "short title",
+                        "description": "1-2 sentence wellness action",
+                        "rationale": "why this action fits the condition",
+                    },
+                    "resources": ["resource title"],
+                    "notes": "brief planning notes",
+                    "meal_constraints": ["tag1", "tag2"],
+                },
                 "halt": False,
             },
             payload={
@@ -108,7 +152,7 @@ class ValidationLoopAgent:
                 "user_profile": user_profile,
                 "low_energy_mode": low_energy_mode,
             },
-        )
+        ) + "\n\nIf you provide revised_plan, include the full plan object. Do not return only changed fields."
         result = self._llm.generate_json(prompt)
         if not result.payload:
             return {"generation_error": result.error}

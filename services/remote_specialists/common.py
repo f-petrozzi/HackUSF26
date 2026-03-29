@@ -14,7 +14,7 @@ for path in (str(REPO_ROOT), str(AGENTS_DIR)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from llm_utils import GeminiJsonClient, build_json_prompt
+from llm_utils import OpenAIJsonClient, build_json_prompt
 from schemas import SpecialistResult
 
 
@@ -34,7 +34,7 @@ def build_specialist_app(
     fallback_factory,
 ):
     app = FastAPI(title=title)
-    llm = GeminiJsonClient()
+    llm = OpenAIJsonClient()
 
     @app.get("/health")
     async def health() -> Dict[str, str]:
