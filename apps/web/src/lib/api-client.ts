@@ -6,6 +6,7 @@ import type { User } from "@/lib/types";
 type AccessTokenProvider = (() => Promise<string | null>) | null;
 
 let accessTokenProvider: AccessTokenProvider = null;
+let demoAsEmail: string | null = null;
 
 export const apiClient = axios.create({
   baseURL: appConfig.apiBaseUrl,
@@ -16,11 +17,18 @@ apiClient.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  if (demoAsEmail) {
+    config.headers["X-Demo-As"] = demoAsEmail;
+  }
   return config;
 });
 
 export function setAccessTokenProvider(provider: AccessTokenProvider) {
   accessTokenProvider = provider;
+}
+
+export function setDemoHeader(email: string | null) {
+  demoAsEmail = email;
 }
 
 export function getStoredUser(): User | null {

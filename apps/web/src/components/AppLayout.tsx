@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import DemoSwitcher from "@/components/DemoSwitcher";
 import {
   LayoutDashboard,
   Activity,
@@ -76,8 +77,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </NavLink>
           ))}
         </nav>
-        <div className="px-3 py-4 border-t border-sidebar-border">
-          <div className="px-3 py-2 mb-2">
+        <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
+          <DemoSwitcher />
+          <div className="px-3 py-2">
             <p className="text-sm font-medium text-sidebar-accent-foreground truncate">{user?.full_name}</p>
             <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
           </div>
