@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 
@@ -39,7 +40,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, isLoading, authError } = useAuth();
+  const { user, isLoading, authError, retrySessionSync, logout } = useAuth();
   if (isLoading) return null;
   if (authError) {
     return (
@@ -52,10 +53,13 @@ function AppRoutes() {
                 <h1 className="text-2xl font-semibold">Backend auth sync failed</h1>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">{authError}</p>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  This usually means the backend rejected the Clerk session token. Make sure the app is opened at
-                  <code> http://localhost:8080</code> and the backend <code>CLERK_AUTHORIZED_PARTIES</code> value
-                  includes your local origin.
+                  Common local causes are a missing backend Clerk secret, an origin that is not listed in
+                  <code> CLERK_AUTHORIZED_PARTIES</code>, or the backend being unavailable.
                 </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Button onClick={retrySessionSync}>Retry session sync</Button>
+                  <Button variant="outline" onClick={logout}>Sign out</Button>
+                </div>
               </div>
             </div>
           }

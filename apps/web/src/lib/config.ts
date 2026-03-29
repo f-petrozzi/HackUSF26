@@ -1,8 +1,8 @@
 const DEFAULT_API_URL = "http://localhost:8000";
 
 function parseMockFlag(value: string | undefined): boolean {
-  if (!value) return true;
-  return value.toLowerCase() !== "false";
+  if (!value) return false;
+  return value.toLowerCase() === "true";
 }
 
 export const appConfig = {
