@@ -1,22 +1,22 @@
-"""Tool: fetch the current user's profile from the API."""
-from google.adk.tools import FunctionTool
-from ._http import get
+from __future__ import annotations
+
+from typing import Any, Dict
+
+from services.tools._client import api_request
 
 
-def get_user_profile(token: str) -> dict:
-    """
-    Fetch the authenticated user's profile.
-
-    Args:
-        token: JWT access token for the user.
-
-    Returns:
-        UserProfile dict or error dict.
-    """
-    try:
-        return get("/api/profile", token=token)
-    except Exception as exc:
-        return {"error": str(exc)}
-
-
-get_user_profile_tool = FunctionTool(get_user_profile)
+def get_user_profile(*, api_base_url: str, auth_header: str) -> Dict[str, Any]:
+    profile = api_request(
+        method="GET",
+        path="/api/profile",
+        api_base_url=api_base_url,
+        auth_header=auth_header,
+    )
+    accessibility = api_request(
+        method="GET",
+        path="/api/profile/accessibility",
+        api_base_url=api_base_url,
+        auth_header=auth_header,
+    )
+    profile["accessibility"] = accessibility
+    return profile

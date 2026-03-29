@@ -9,12 +9,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import get_current_user
+from agent_runner import run_coordinator_for_run
 from database import get_db
 from models.agents import AgentMessage, AgentRun
 from models.user import User
@@ -42,6 +43,8 @@ router = APIRouter(prefix="/api/runs", tags=["runs"])
 @router.post("/trigger", response_model=AgentRunOut, status_code=201)
 async def trigger_run(
     body: TriggerRunRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -53,6 +56,14 @@ async def trigger_run(
     db.add(run)
     await db.commit()
     await db.refresh(run)
+    background_tasks.add_task(
+        run_coordinator_for_run,
+        user_id=user.id,
+        run_id=run.id,
+        auth_header=request.headers.get("authorization", ""),
+        api_base_url=str(request.base_url).rstrip("/"),
+        scenario="live",
+    )
     return run
 
 

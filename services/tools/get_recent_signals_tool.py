@@ -1,24 +1,15 @@
-"""Tool: fetch recent wearable events for the current user."""
-from google.adk.tools import FunctionTool
-from ._http import get
+from __future__ import annotations
+
+from typing import Any, Dict, List
+
+from services.tools._client import api_request
 
 
-def get_recent_signals(token: str, limit: int = 20) -> dict:
-    """
-    Fetch recent wearable/manual signal events for the authenticated user.
-
-    Args:
-        token: JWT access token.
-        limit: Maximum number of events to return (default 20).
-
-    Returns:
-        List of WearableEvent dicts wrapped in {"events": [...]} or error dict.
-    """
-    try:
-        data = get("/api/events/recent", params={"limit": limit}, token=token)
-        return {"events": data}
-    except Exception as exc:
-        return {"error": str(exc)}
-
-
-get_recent_signals_tool = FunctionTool(get_recent_signals)
+def get_recent_signals(*, api_base_url: str, auth_header: str, limit: int = 20) -> List[Dict[str, Any]]:
+    return api_request(
+        method="GET",
+        path="/api/events/recent",
+        api_base_url=api_base_url,
+        auth_header=auth_header,
+        params={"limit": limit},
+    )

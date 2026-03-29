@@ -1,12 +1,6 @@
 {
   "name": "CaregiverBurnoutSpecialist",
-  "description": "Remote A2A specialist for caregiver persona. Enriches intervention plans with caregiver-burden context, respite resource routing, and escalation recommendations.",
-  "url": "http://localhost:8002",
-  "version": "1.0.0",
-  "capabilities": {
-    "streaming": false,
-    "pushNotifications": false
-  },
-  "defaultInputModes": ["text"],
-  "defaultOutputModes": ["text"]
+  "description": "Caregiver burden and respite routing specialist for CareMesh.",
+  "url": "http://localhost:8002/invoke",
+  "version": "0.1.0"
 }

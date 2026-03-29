@@ -1,12 +1,6 @@
 {
   "name": "StudentSupportSpecialist",
-  "description": "Remote A2A specialist for student persona. Enriches intervention plans with academic-stress context, campus resource recommendations, and burnout-risk flagging.",
-  "url": "http://localhost:8001",
-  "version": "1.0.0",
-  "capabilities": {
-    "streaming": false,
-    "pushNotifications": false
-  },
-  "defaultInputModes": ["text"],
-  "defaultOutputModes": ["text"]
+  "description": "Academic stress and campus support specialist for CareMesh.",
+  "url": "http://localhost:8001/invoke",
+  "version": "0.1.0"
 }
