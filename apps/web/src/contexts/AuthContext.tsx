@@ -11,6 +11,7 @@ interface AuthContextValue {
   setUser: (u: User | null) => void;
   logout: () => void;
   isLoading: boolean;
+  authError: string | null;
 }
 
 type ClerkUser = NonNullable<ReturnType<typeof useUser>["user"]>;
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextValue>({
   setUser: () => {},
   logout: () => {},
   isLoading: true,
+  authError: null,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -58,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clerk = useClerk();
   const [user, setResolvedUser] = useState<User | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     setAccessTokenProvider(appConfig.useMockApi ? null : async () => (await getToken()) || null);
@@ -68,30 +71,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isLoaded) return;
     if (!clerkUser) {
       clearStoredSession();
+      setAuthError(null);
       setResolvedUser(null);
       return;
     }
 
     const fallbackUser = mapClerkUser(clerkUser);
     if (appConfig.useMockApi) {
+      setAuthError(null);
       setStoredUser(fallbackUser);
       setResolvedUser(fallbackUser);
       return;
     }
 
     let cancelled = false;
+    setAuthError(null);
     setIsSyncing(true);
     refreshSessionUser(fallbackUser.full_name)
       .then((nextUser) => {
         if (!cancelled) {
           setStoredUser(nextUser);
+          setAuthError(null);
           setResolvedUser(nextUser);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setStoredUser(fallbackUser);
-          setResolvedUser(fallbackUser);
+          clearStoredSession();
+          setResolvedUser(null);
+          setAuthError("Backend auth sync failed. Use http://localhost:8080 and verify Clerk backend secrets and authorized local origins.");
         }
       })
       .finally(() => {
@@ -106,12 +114,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setUser = (nextUser: User | null) => {
     if (!nextUser) {
       clearStoredSession();
+      setAuthError(null);
       setResolvedUser(null);
       return;
     }
     if (!clerkUser) return;
 
     setStoredUser(nextUser);
+    setAuthError(null);
     setResolvedUser(nextUser);
 
     void clerkUser.update({
@@ -127,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     clearStoredSession();
+    setAuthError(null);
     void clerk.signOut({ redirectUrl: "/login" });
   };
 
@@ -137,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser,
         logout,
         isLoading: !isLoaded || isSyncing,
+        authError,
       }}
     >
       {children}

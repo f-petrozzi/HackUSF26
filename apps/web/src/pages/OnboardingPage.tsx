@@ -1,7 +1,8 @@
+import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { submitOnboarding } from "@/lib/api";
+import { refreshSessionUser, submitOnboarding } from "@/lib/api";
 import type { OnboardingRequestDto } from "@/lib/api-contracts";
 import { appConfig } from "@/lib/config";
 import { Button } from "@/components/ui/button";
@@ -95,10 +96,25 @@ export default function OnboardingPage() {
 
       setUser(user);
       navigate("/dashboard");
-    } catch {
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        try {
+          const user = await refreshSessionUser(authUser?.full_name);
+          setUser(user);
+          navigate("/dashboard");
+          return;
+        } catch {
+          // Fall through to the generic toast below if canonical refresh fails.
+        }
+      }
+
+      const description = axios.isAxiosError(error)
+        ? error.response?.data?.detail || "We couldn't save your profile just yet."
+        : "We couldn't save your profile just yet.";
+
       toast({
         title: "Onboarding failed",
-        description: "We couldn't save your profile just yet.",
+        description,
         variant: "destructive",
       });
     } finally {
