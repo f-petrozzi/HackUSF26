@@ -10,3 +10,15 @@ def coordinator_api_base_url(request: Request) -> str:
     if configured:
         return configured.rstrip("/")
     return str(request.base_url).rstrip("/")
+
+
+def coordinator_auth_header(request: Request) -> str:
+    auth_header = request.headers.get("authorization", "").strip()
+    if auth_header:
+        return auth_header
+
+    session_token = request.cookies.get("__session", "").strip()
+    if session_token:
+        return f"Bearer {session_token}"
+
+    return ""
