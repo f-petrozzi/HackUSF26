@@ -5,7 +5,14 @@ import { Network } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function TracesListPage() {
-  const { data: runs } = useQuery({ queryKey: ["runs"], queryFn: getRuns });
+  const { data: runs } = useQuery({
+    queryKey: ["runs"],
+    queryFn: getRuns,
+    refetchInterval: (query) =>
+      (query.state.data ?? []).some((run) => run.status === "pending" || run.status === "running")
+        ? 2000
+        : false,
+  });
 
   return (
     <div className="p-6 lg:p-10 max-w-4xl mx-auto space-y-8">
@@ -18,6 +25,11 @@ export default function TracesListPage() {
       </div>
 
       <div className="space-y-3">
+        {!runs?.length ? (
+          <div className="rounded-xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
+            No runs yet. Submit a check-in or run a scenario to populate the trace dashboard.
+          </div>
+        ) : null}
         {runs?.map((run) => (
           <Link
             key={run.id}

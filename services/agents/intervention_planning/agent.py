@@ -207,22 +207,23 @@ class InterventionPlanningAgent:
             "resources": ["resource title"],
             "notes": "brief planning notes",
         }
+        payload = {
+            "persona_type": persona_type,
+            "goal": goal,
+            "dietary_style": dietary_style,
+            "allergies": allergies,
+            "resources": resources,
+            "findings": findings,
+            "risk_level": risk_level,
+            "signals": signals,
+        }
         return (
             f"{INTERVENTION_PLANNING_PROMPT}\n\n"
             "Return only valid JSON with no markdown fences.\n"
             "Keep recommendations practical, safe, and specific.\n"
             "Do not recommend medical treatment or crisis claims.\n"
             f"Response schema:\n{json.dumps(response_schema, indent=2)}\n\n"
-            f"Input:\n{json.dumps({
-                'persona_type': persona_type,
-                'goal': goal,
-                'dietary_style': dietary_style,
-                'allergies': allergies,
-                'resources': resources,
-                'findings': findings,
-                'risk_level': risk_level,
-                'signals': signals,
-            }, indent=2)}"
+            f"Input:\n{json.dumps(payload, indent=2)}"
         )
 
     @staticmethod

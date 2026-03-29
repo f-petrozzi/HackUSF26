@@ -2,6 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /workspace
 
+ENV SPECIALIST_APP_MODULE=services.remote_specialists.student_support.app:app
+
 RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
 
 COPY services/remote_specialists/requirements.txt services/remote_specialists/requirements.txt
@@ -9,4 +11,4 @@ RUN pip install --no-cache-dir -r services/remote_specialists/requirements.txt
 
 COPY . .
 
-CMD ["uvicorn", "services.remote_specialists.student_support.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn ${SPECIALIST_APP_MODULE} --host 0.0.0.0 --port ${PORT:-8000}"]

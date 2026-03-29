@@ -4,6 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
+  AlertTriangle,
   Bot,
   CheckCircle2,
   Globe2,
@@ -99,6 +100,20 @@ export default function TraceView() {
             <p className="text-sm font-semibold">Run still in progress</p>
             <p className="text-sm text-muted-foreground">
               Polling every 2 seconds until the final trace data is available.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {run.status === "failed" ? (
+        <div className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4 shadow-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 text-destructive" />
+          <div>
+            <p className="text-sm font-semibold">Run failed</p>
+            <p className="text-sm text-muted-foreground">
+              {run.messages.length > 0
+                ? "The coordinator stopped before producing a final plan. Review the trace below for the last successful step."
+                : "No trace messages were persisted. This usually means the coordinator failed during startup or deployment bootstrap."}
             </p>
           </div>
         </div>
