@@ -100,13 +100,37 @@ export const mockRecipes: Recipe[] = [
     id: "rec1",
     title: "Spinach & Walnut Power Salad",
     description: "A magnesium-rich salad to combat stress and support better sleep.",
+    source_url: "",
+    our_way_notes: "",
     tags: ["anti-stress", "quick", "high-magnesium"],
     prep_time: 10,
     cook_time: 0,
     servings: 1,
     ingredients: [
-      { group: "Base", items: ["3 cups fresh spinach", "1/4 cup walnuts", "1/4 avocado, sliced"] },
-      { group: "Dressing", items: ["1 tbsp olive oil", "1 tsp lemon juice", "Pinch of sea salt"] },
+      {
+        group: "Base",
+        items: [
+          { name: "fresh spinach", quantity: "3 cups", category: "Produce", section: "Base" },
+          { name: "walnuts", quantity: "1/4 cup", category: "Pantry", section: "Base" },
+          { name: "avocado, sliced", quantity: "1/4", category: "Produce", section: "Base" },
+        ],
+      },
+      {
+        group: "Dressing",
+        items: [
+          { name: "olive oil", quantity: "1 tbsp", category: "Pantry", section: "Dressing" },
+          { name: "lemon juice", quantity: "1 tsp", category: "Produce", section: "Dressing" },
+          { name: "sea salt", quantity: "Pinch", category: "Pantry", section: "Dressing" },
+        ],
+      },
+    ],
+    ingredient_items: [
+      { name: "fresh spinach", quantity: "3 cups", category: "Produce", section: "Base" },
+      { name: "walnuts", quantity: "1/4 cup", category: "Pantry", section: "Base" },
+      { name: "avocado, sliced", quantity: "1/4", category: "Produce", section: "Base" },
+      { name: "olive oil", quantity: "1 tbsp", category: "Pantry", section: "Dressing" },
+      { name: "lemon juice", quantity: "1 tsp", category: "Produce", section: "Dressing" },
+      { name: "sea salt", quantity: "Pinch", category: "Pantry", section: "Dressing" },
     ],
     instructions: [
       { group: "Assemble", steps: ["Wash and dry spinach", "Toast walnuts lightly in a dry pan", "Combine spinach, walnuts, and avocado in a bowl"] },
@@ -117,13 +141,37 @@ export const mockRecipes: Recipe[] = [
     id: "rec2",
     title: "Calming Chamomile Oat Bowl",
     description: "A warm, soothing breakfast that promotes relaxation and sustained energy.",
+    source_url: "",
+    our_way_notes: "",
     tags: ["breakfast", "calming", "sleep-support"],
     prep_time: 5,
     cook_time: 10,
     servings: 1,
     ingredients: [
-      { group: "Base", items: ["1/2 cup rolled oats", "1 cup chamomile tea (brewed)", "1 tbsp honey"] },
-      { group: "Toppings", items: ["1 banana, sliced", "1 tbsp almond butter", "Cinnamon to taste"] },
+      {
+        group: "Base",
+        items: [
+          { name: "rolled oats", quantity: "1/2 cup", category: "Pantry", section: "Base" },
+          { name: "chamomile tea (brewed)", quantity: "1 cup", category: "Beverages", section: "Base" },
+          { name: "honey", quantity: "1 tbsp", category: "Pantry", section: "Base" },
+        ],
+      },
+      {
+        group: "Toppings",
+        items: [
+          { name: "banana, sliced", quantity: "1", category: "Produce", section: "Toppings" },
+          { name: "almond butter", quantity: "1 tbsp", category: "Pantry", section: "Toppings" },
+          { name: "cinnamon", quantity: "to taste", category: "Pantry", section: "Toppings" },
+        ],
+      },
+    ],
+    ingredient_items: [
+      { name: "rolled oats", quantity: "1/2 cup", category: "Pantry", section: "Base" },
+      { name: "chamomile tea (brewed)", quantity: "1 cup", category: "Beverages", section: "Base" },
+      { name: "honey", quantity: "1 tbsp", category: "Pantry", section: "Base" },
+      { name: "banana, sliced", quantity: "1", category: "Produce", section: "Toppings" },
+      { name: "almond butter", quantity: "1 tbsp", category: "Pantry", section: "Toppings" },
+      { name: "cinnamon", quantity: "to taste", category: "Pantry", section: "Toppings" },
     ],
     instructions: [
       { group: "Cook", steps: ["Brew chamomile tea and pour into a saucepan", "Add oats and cook on medium for 8-10 minutes", "Stir in honey"] },
