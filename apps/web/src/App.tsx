@@ -39,8 +39,30 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, authError } = useAuth();
   if (isLoading) return null;
+  if (authError) {
+    return (
+      <Routes>
+        <Route
+          path="*"
+          element={
+            <div className="flex min-h-screen items-center justify-center bg-background px-6 text-foreground">
+              <div className="max-w-xl rounded-2xl border border-border bg-card p-8 shadow-sm">
+                <h1 className="text-2xl font-semibold">Backend auth sync failed</h1>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{authError}</p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  This usually means the backend rejected the Clerk session token. Make sure the app is opened at
+                  <code> http://localhost:8080</code> and the backend <code>CLERK_AUTHORIZED_PARTIES</code> value
+                  includes your local origin.
+                </p>
+              </div>
+            </div>
+          }
+        />
+      </Routes>
+    );
+  }
 
   return (
     <Routes>
