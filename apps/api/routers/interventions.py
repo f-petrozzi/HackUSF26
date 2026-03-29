@@ -5,9 +5,9 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth import get_current_user
+from auth import get_current_user, is_staff
 from database import get_db
-from models.agents import Intervention
+from models.agents import AgentRun, Intervention
 from models.user import User
 from schemas.agents import InterventionOut
 
@@ -24,14 +24,43 @@ class InterventionCreate(BaseModel):
 router = APIRouter(prefix="/api/interventions", tags=["interventions"])
 
 
+async def _resolve_target_user_id(
+    *,
+    requested_user_id: int,
+    run_id: Optional[int],
+    current_user: User,
+    db: AsyncSession,
+) -> int:
+    if run_id is not None:
+        run = (
+            await db.execute(select(AgentRun).where(AgentRun.id == run_id))
+        ).scalar_one_or_none()
+        if run is None:
+            raise HTTPException(status_code=404, detail="Run not found")
+        if not is_staff(current_user) and run.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return run.user_id
+
+    if not is_staff(current_user):
+        return current_user.id
+
+    return requested_user_id
+
+
 @router.post("", response_model=InterventionOut, status_code=201)
 async def create_intervention(
     body: InterventionCreate,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    target_user_id = await _resolve_target_user_id(
+        requested_user_id=body.user_id,
+        run_id=body.run_id,
+        current_user=user,
+        db=db,
+    )
     intervention = Intervention(
-        user_id=body.user_id,
+        user_id=target_user_id,
         run_id=body.run_id,
         meal_suggestion=body.meal_suggestion,
         activity_suggestion=body.activity_suggestion,

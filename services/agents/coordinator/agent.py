@@ -216,6 +216,7 @@ class CareCoordinatorPipeline:
 
     def run(self, *, user_id: str, scenario: str, run_id: int = 1) -> Dict[str, Any]:
         recorder = TraceRecorder(run_id=run_id, tool_provider=self.tool_provider)
+        run_user_id = int(user_id)
         inferred_persona = "student" if scenario == "stressed_student" else (
             "caregiver" if scenario == "exhausted_caregiver" else "older_adult"
         )
@@ -327,7 +328,7 @@ class CareCoordinatorPipeline:
         ).model_dump()
 
         intervention_payload = {
-            "user_id": int(profile["user_id"]),
+            "user_id": run_user_id,
             "run_id": run_id,
             "meal_suggestion": final_plan["meal_suggestion"],
             "activity_suggestion": final_plan["activity_suggestion"],
@@ -340,14 +341,14 @@ class CareCoordinatorPipeline:
         if risk_result["risk_level"] in {"moderate", "high", "critical"}:
             case_record = self.tool_provider.create_case(
                 {
-                    "user_id": int(profile["user_id"]),
+                    "user_id": run_user_id,
                     "run_id": run_id,
                     "risk_level": risk_result["risk_level"],
                 }
             )
         notification_record = self.tool_provider.send_notification(
             {
-                "user_id": int(profile["user_id"]),
+                "user_id": run_user_id,
                 "type": "intervention_ready",
                 "content": empathy_result["empathy_message"],
             }
