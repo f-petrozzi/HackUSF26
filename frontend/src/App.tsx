@@ -26,6 +26,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== "admin" && !user.onboarded) return <Navigate to="/onboarding" replace />;
   return <AppLayout>{children}</AppLayout>;
 }
 
@@ -43,9 +44,9 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
-      <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <RegisterPage />} />
-      <Route path="/onboarding" element={user ? <OnboardingPage /> : <Navigate to="/login" />} />
+      <Route path="/login" element={user ? <Navigate to={user.role === "admin" ? "/coordinator" : user.onboarded ? "/dashboard" : "/onboarding"} /> : <LoginPage />} />
+      <Route path="/register" element={user ? <Navigate to={user.role === "admin" ? "/coordinator" : user.onboarded ? "/dashboard" : "/onboarding"} /> : <RegisterPage />} />
+      <Route path="/onboarding" element={user ? (user.role === "admin" || user.onboarded ? <Navigate to={user.role === "admin" ? "/coordinator" : "/dashboard"} replace /> : <OnboardingPage />) : <Navigate to="/login" />} />
       <Route path="/dashboard" element={<ProtectedRoute><MemberDashboard /></ProtectedRoute>} />
       <Route path="/health" element={<ProtectedRoute><HealthDashboard /></ProtectedRoute>} />
       <Route path="/check-in" element={<ProtectedRoute><CheckInPage /></ProtectedRoute>} />
@@ -55,7 +56,7 @@ function AppRoutes() {
       <Route path="/scenarios" element={<AdminRoute><ScenarioRunner /></AdminRoute>} />
       <Route path="/traces" element={<AdminRoute><TracesListPage /></AdminRoute>} />
       <Route path="/traces/:runId" element={<AdminRoute><TraceView /></AdminRoute>} />
-      <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
+      <Route path="/" element={<Navigate to={user ? (user.role === "admin" ? "/coordinator" : user.onboarded ? "/dashboard" : "/onboarding") : "/login"} replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

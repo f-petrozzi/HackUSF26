@@ -64,6 +64,10 @@ async function fetchSessionUser(fallbackName?: string): Promise<User> {
   return user;
 }
 
+export async function refreshSessionUser(fallbackName?: string): Promise<User> {
+  return fetchSessionUser(fallbackName);
+}
+
 function mapRunRecord(run: AgentRunDto): AgentRun {
   return {
     id: String(run.id),
