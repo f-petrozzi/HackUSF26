@@ -23,8 +23,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    env_file:
-      - apps/api/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://caremesh:caremesh@db:5432/caremesh
       CAREMESH_REPO_ROOT: /workspace

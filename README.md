@@ -39,28 +39,78 @@ docs/
 
 ---
 
-## Quick start (local)
+## Secrets setup (Doppler — required before running anything)
 
-**Prerequisites:** Docker, Python 3.11+, Node 18+
+Secrets are managed via [Doppler](https://doppler.com) — no `.env` files, no keys in the repo.
+
+**You need a service token from Fab before you can run the app locally.** DM him for it.
+
+### Install Doppler CLI
+
+**macOS:**
+```bash
+brew install dopplerhq/cli/doppler
+```
+
+**Ubuntu/Debian:**
+```bash
+curl -Ls --tlsv1.2 --proto "=https" --retry 3 https://cli.doppler.com/install.sh | sudo sh
+```
+
+**Windows:** download the installer from [doppler.com/cli](https://docs.doppler.com/docs/install-cli)
+
+### Authenticate with your service token
 
 ```bash
-# 1. Clone and copy env
+# Use the service token Fab gives you (starts with "dp.st.")
+doppler configure set token YOUR_SERVICE_TOKEN
+
+# Link to the caremesh project (doppler.yaml auto-fills this)
+doppler setup
+```
+
+### Verify it works
+
+```bash
+doppler secrets
+# Should list all environment variables without showing values
+```
+
+After this, prefix every command with `doppler run --` instead of needing a `.env` file:
+
+```bash
+doppler run -- uvicorn main:app --reload --port 8000
+doppler run -- alembic upgrade head
+doppler run -- python ../../infra/seed/seed.py
+```
+
+> **Note:** Service tokens let you inject secrets locally but do not allow viewing secret values in the Doppler dashboard. Only Fab (project owner) can see raw values.
+
+---
+
+## Quick start (local)
+
+**Prerequisites:** Docker, Python 3.11+, Node 18+, Doppler CLI (see above)
+
+```bash
+# 1. Clone the repo
 git clone https://github.com/f-petrozzi/HackUSF26.git
 cd HackUSF26
-cp .env.example apps/api/.env
-# Fill in GEMINI_API_KEY and JWT_SECRET in apps/api/.env
 
-# 2. Start PostgreSQL
+# 2. Set up Doppler (see Secrets setup above)
+doppler setup
+
+# 3. Start PostgreSQL
 docker compose up db -d
 
-# 3. Start the API
+# 4. Start the API
 cd apps/api
 pip install -r requirements.txt
-alembic upgrade head
-python ../../infra/seed/seed.py
-uvicorn main:app --reload --port 8000
+doppler run -- alembic upgrade head
+doppler run -- python ../../infra/seed/seed.py
+doppler run -- uvicorn main:app --reload --port 8000
 
-# 4. Verify
+# 5. Verify
 curl http://localhost:8000/health
 # → {"status": "ok", "service": "caremesh-api"}
 ```
@@ -234,16 +284,9 @@ Before each merge: run your piece against the real API and confirm it works.
 
 ## Environment variables
 
-Copy `.env.example` to `apps/api/.env` and fill in:
+All secrets are managed via Doppler — see **Secrets setup** above. Do not create `.env` files.
 
-```
-DATABASE_URL=postgresql+asyncpg://caremesh:caremesh@localhost:5432/caremesh
-JWT_SECRET=<random string>
-GEMINI_API_KEY=<from Google AI Studio — free tier works>
-GARMIN_ENABLED=false       # set true only if bootstrapping a real Garmin account
-```
-
-Each service also has its own `.env` — see the relevant setup doc.
+The full list of variables is in `.env.example` for reference only. Contact Fab for a service token.
 
 ---
 
