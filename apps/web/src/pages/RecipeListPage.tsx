@@ -216,7 +216,7 @@ export default function RecipeListPage() {
             <ParsedRecipeReview
               recipe={parsedRecipe}
               isSaving={saveRecipeMut.isPending}
-              onChange={setParsedRecipe}
+              onChange={(nextRecipe) => setParsedRecipe(nextRecipe)}
               onSave={() => saveRecipeMut.mutate(parsedRecipe)}
               onDismiss={() => setParsedRecipe(null)}
             />

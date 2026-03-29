@@ -20,6 +20,11 @@ def _discover_repo_root() -> Path:
         if (parent / "services" / "agents").exists():
             return parent
 
+    # Common Docker volume-mount fallback (/workspace is mounted in docker-compose)
+    workspace = Path("/workspace")
+    if (workspace / "services" / "agents").exists():
+        return workspace
+
     raise RuntimeError(
         "Cannot locate agents directory. "
         "Set CAREMESH_REPO_ROOT to the repository root (the directory containing services/agents)."

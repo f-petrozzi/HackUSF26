@@ -211,10 +211,13 @@ export default function RecipeDetailPage() {
   }
 
   const ingredientIndex = buildIngredientIndex(recipe.ingredient_items);
-  const showIngredientGroupLabels =
-    recipe.ingredients.length > 1 || (recipe.ingredients[0]?.group && recipe.ingredients[0].group !== "Ingredients");
-  const showInstructionGroupLabels =
-    recipe.instructions.length > 1 || (recipe.instructions[0]?.group && recipe.instructions[0].group !== "Steps");
+  const showIngredientGroupLabels = Boolean(
+    recipe.ingredients.length > 1 || (recipe.ingredients[0]?.group && recipe.ingredients[0].group !== "Ingredients"),
+  );
+  const showInstructionGroupLabels = Boolean(
+    recipe.instructions.length > 1 || (recipe.instructions[0]?.group && recipe.instructions[0].group !== "Steps"),
+  );
+  const sourceUrl = recipe.source_url.match(/^https?:\/\//) ? recipe.source_url : `https://${recipe.source_url}`;
 
   return (
     <div className="mx-auto max-w-4xl p-6 lg:p-10">
@@ -360,7 +363,7 @@ export default function RecipeDetailPage() {
                 <div className="rounded-3xl border border-border/80 bg-background p-5">
                   <div className="mb-2 text-sm font-semibold">Source</div>
                   <a
-                    href={recipe.source_url}
+                    href={sourceUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
