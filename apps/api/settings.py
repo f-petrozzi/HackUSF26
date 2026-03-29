@@ -10,11 +10,6 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+asyncpg://caremesh:caremesh@localhost:5432/caremesh"
 
-    # JWT
-    jwt_secret: str = "change-me"
-    jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 10080  # 1 week
-
     # Clerk
     clerk_secret_key: str = ""
     clerk_jwt_key: str = ""

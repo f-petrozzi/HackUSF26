@@ -120,7 +120,7 @@ All agents must be implemented as real Google ADK agents using the Python ADK SD
 
 Tables required for MVP:
 
-- `users` — id, email (hashed or pseudonymized), hashed_password, role, created_at
+- `users` — id, email (hashed or pseudonymized), clerk_user_id, role, created_at
 - `user_profiles` — id, user_id, age_range, sex, height_cm, weight_kg, goal, activity_level, dietary_style, allergies, persona_type, created_at
 - `accessibility_preferences` — user_id, simplified_language, large_text, low_energy_mode
 - `wearable_events` — id, user_id, source (simulated|manual|garmin_future), signal_type, value, unit, recorded_at

@@ -1,29 +1,13 @@
 # API Contracts — CareMesh
 
 Base URL: `http://localhost:8000`
-Auth: `Authorization: Bearer <jwt_token>` on all endpoints except `/api/auth/*`
+Auth: `Authorization: Bearer <Clerk session token>` on protected endpoints
 
 ---
 
 ## Auth
 
-### POST /api/auth/register
-```json
-// Request
-{ "email": "user@example.com", "password": "password123" }
-
-// Response 201
-{ "access_token": "eyJ...", "token_type": "bearer", "user_id": 1, "role": "member" }
-```
-
-### POST /api/auth/login
-```json
-// Request
-{ "email": "user@example.com", "password": "password123" }
-
-// Response 200
-{ "access_token": "eyJ...", "token_type": "bearer", "user_id": 1, "role": "member" }
-```
+Authentication is handled by Clerk. The API does not expose local password login or registration endpoints.
 
 ### GET /api/auth/me
 ```json

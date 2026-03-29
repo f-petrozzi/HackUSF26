@@ -51,9 +51,7 @@ Scenario Runner
 These are REST endpoints consumed by agents (as ADK tools) and by the frontend.
 
 ```
-POST   /api/auth/register
-POST   /api/auth/login
-GET    /api/users/me
+GET    /api/auth/me              ← Clerk-authenticated session lookup
 
 POST   /api/onboarding
 GET    /api/profile

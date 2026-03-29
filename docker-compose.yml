@@ -68,9 +68,10 @@ services:
       context: ./apps/web
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "8080:8080"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      VITE_API_URL: http://localhost:8000
+      VITE_USE_MOCK_API: "false"
     depends_on:
       - api
       - specialist-student

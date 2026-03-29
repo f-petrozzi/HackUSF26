@@ -17,7 +17,7 @@ CareMesh monitors your health signals (sleep, stress, steps, mood) and runs a te
 ```
 apps/
   api/              ← FastAPI backend (Fab)
-  web/              ← reserved for future consolidation
+  web/              ← active Vite + React frontend
 services/
   agents/           ← Google ADK local agent pipeline (Person 2)
   tools/            ← ADK tool layer — HTTP wrappers for the API (Person 3)
@@ -35,11 +35,10 @@ docs/
     agents.md
     specialists.md
     frontend.md
-frontend/           ← current Vite + React frontend implementation
 ```
 
-Current note: the active frontend code lives in `frontend/`, and Clerk publishable keys should be injected through Doppler as `VITE_CLERK_PUBLISHABLE_KEY`.
-For live Clerk-backed API auth, the backend also needs `CLERK_JWT_KEY`, `CLERK_FRONTEND_API_URL`, and usually `CLERK_SECRET_KEY`.
+Current note: the active frontend code lives in `apps/web/`, and Clerk publishable keys should be injected through Doppler as `VITE_CLERK_PUBLISHABLE_KEY`.
+Clerk is the only supported auth flow in the app. For live Clerk-backed API auth, the backend also needs `CLERK_JWT_KEY`, `CLERK_FRONTEND_API_URL`, and usually `CLERK_SECRET_KEY`.
 
 ---
 
@@ -121,12 +120,12 @@ curl http://localhost:8000/health
 
 API docs available at `http://localhost:8000/docs` once running.
 
-**Demo users (created by seed):**
-| Email | Password | Role |
-|---|---|---|
-| student@caremesh.demo | demo1234 | member |
-| caregiver@caremesh.demo | demo1234 | member |
-| admin@caremesh.demo | admin1234 | admin |
+**Seeded user roles (linked by email when the same user signs in with Clerk):**
+| Email | Role |
+|---|---|
+| student@caremesh.demo | member |
+| caregiver@caremesh.demo | member |
+| admin@caremesh.demo | admin |
 
 ---
 

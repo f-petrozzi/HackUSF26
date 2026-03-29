@@ -2,31 +2,63 @@
 
 This folder is the active CareMesh experience-layer implementation.
 
-It is intentionally set up to support two modes:
+Run it from `apps/web/`.
 
-- Mock mode for UI development and demos without backend dependencies
-- Live mode for FastAPI integration through a single API facade
+## Auth
 
-## Commands
-
-```bash
-npm install
-npm run dev
-npm run build
-npm run test
-```
+Clerk is the only supported authentication flow in the app. `VITE_CLERK_PUBLISHABLE_KEY` is required to run the frontend.
 
 ## Environment
 
-Copy `.env.example` to `.env.local` or `.env` and set:
+Use Doppler in normal development:
+
+```bash
+cd apps/web
+doppler run -- npm run dev
+```
+
+If you need a local file, copy `.env.example` to `.env.local` and set:
 
 ```bash
 VITE_API_URL=http://localhost:8000
 VITE_USE_MOCK_API=true
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
 ```
 
-Set `VITE_USE_MOCK_API=false` when you want the app to call the FastAPI backend.
+## Current integration state
 
-## Integration Rule
+- Clerk is wired into the frontend shell, route guards, and onboarding state.
+- Onboarding state is stored in Clerk user `unsafeMetadata`.
+- API data can still run in mock mode independently of auth.
+- The FastAPI backend now accepts Clerk session tokens and no longer exposes password login/register routes.
+- First-time Clerk users are synced into the local `users` table automatically.
+- For first-time user provisioning, either set `CLERK_SECRET_KEY` on the backend or add an email claim to the Clerk session token.
+- To preserve seeded roles such as admin, sign into Clerk with the same email as the existing seeded user row.
+
+## Backend secrets
+
+The frontend publishable key is not enough for full live mode. The backend should also receive:
+
+```bash
+CLERK_JWT_KEY=
+CLERK_FRONTEND_API_URL=
+CLERK_AUTHORIZED_PARTIES=http://localhost:8080
+CLERK_SECRET_KEY=
+```
+
+`CLERK_SECRET_KEY` is used only when the backend needs to fetch a Clerk user's email during first-time provisioning.
+
+## Commands
+
+```bash
+cd apps/web
+npm install
+npm run dev
+npm run typecheck
+npm run test
+npm run build
+```
+
+## Integration rule
 
 Keep backend DTOs in `src/lib/api-contracts.ts`, UI models in `src/lib/types.ts`, and translation logic in `src/lib/api-mappers.ts`.

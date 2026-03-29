@@ -3,24 +3,24 @@ import axios from "axios";
 import { appConfig, storageKeys } from "@/lib/config";
 import type { User } from "@/lib/types";
 
+type AccessTokenProvider = (() => Promise<string | null>) | null;
+
+let accessTokenProvider: AccessTokenProvider = null;
+
 export const apiClient = axios.create({
   baseURL: appConfig.apiBaseUrl,
 });
 
-apiClient.interceptors.request.use((config) => {
-  const token = getStoredToken();
+apiClient.interceptors.request.use(async (config) => {
+  const token = accessTokenProvider ? await accessTokenProvider() : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-export function getStoredToken(): string | null {
-  return localStorage.getItem(storageKeys.token);
-}
-
-export function setStoredToken(token: string) {
-  localStorage.setItem(storageKeys.token, token);
+export function setAccessTokenProvider(provider: AccessTokenProvider) {
+  accessTokenProvider = provider;
 }
 
 export function getStoredUser(): User | null {
@@ -40,6 +40,5 @@ export function setStoredUser(user: User) {
 }
 
 export function clearStoredSession() {
-  localStorage.removeItem(storageKeys.token);
   localStorage.removeItem(storageKeys.user);
 }

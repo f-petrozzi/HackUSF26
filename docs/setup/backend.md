@@ -32,7 +32,10 @@ Create `apps/api/.env` from `.env.example`:
 
 ```
 DATABASE_URL=postgresql+asyncpg://caremesh:caremesh@localhost:5432/caremesh
-JWT_SECRET=your-secret-key-here
+CLERK_JWT_KEY=your-clerk-jwt-public-key
+CLERK_FRONTEND_API_URL=https://your-instance.clerk.accounts.dev
+CLERK_AUTHORIZED_PARTIES=http://localhost:8080
+CLERK_SECRET_KEY=your-clerk-secret-key
 GEMINI_API_KEY=your-gemini-key         # for recipe paste parsing + calorie estimates
 GARMIN_USERNAME=your-garmin-email      # your personal Garmin credentials for bootstrap
 GARMIN_PASSWORD=your-garmin-password
@@ -87,13 +90,8 @@ Tokens are cached in `GARMIN_TOKEN_DIR/<user_id>/`. After bootstrap, sync runs a
 # Health check
 curl http://localhost:8000/health
 
-# Register a test user
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email": "test@test.com", "password": "test1234"}'
-
-# Check seed data loaded
-curl http://localhost:8000/api/scenarios
+# Protected routes now require a Clerk session token.
+# Sign into the frontend with Clerk, then use that session against /api/auth/me and other protected endpoints.
 ```
 
 ---

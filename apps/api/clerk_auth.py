@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import secrets
 from functools import lru_cache
 from typing import Any
 
@@ -8,14 +6,11 @@ import httpx
 import jwt as pyjwt
 from fastapi import HTTPException, status
 from jwt import PyJWKClient
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.user import User
 from settings import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def clerk_enabled() -> bool:
@@ -162,7 +157,6 @@ async def get_or_create_clerk_user(claims: dict[str, Any], db: AsyncSession) -> 
     user = User(
         clerk_user_id=clerk_user_id,
         email=email,
-        hashed_password=pwd_context.hash(secrets.token_urlsafe(32)),
         role="member",
     )
     db.add(user)

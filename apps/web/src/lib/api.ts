@@ -1,20 +1,17 @@
 import axios from "axios";
 
-import { apiClient, clearStoredSession, getStoredUser, setStoredToken, setStoredUser } from "@/lib/api-client";
+import { apiClient, clearStoredSession, getStoredUser, setStoredUser } from "@/lib/api-client";
 import type {
   AgentRunDto,
   AuthMeDto,
   CheckInSubmission,
   HealthOverviewDto,
   InterventionDto,
-  LoginRequestDto,
   OnboardingRequestDto,
   ProfileDto,
   RecipeDto,
-  RegisterRequestDto,
   RunTraceDto,
   ScenarioDto,
-  TokenResponseDto,
   WearableEventDto,
   CaseDto,
 } from "@/lib/api-contracts";
@@ -64,6 +61,10 @@ async function fetchSessionUser(fallbackName?: string): Promise<User> {
   return user;
 }
 
+export async function refreshSessionUser(fallbackName?: string): Promise<User> {
+  return fetchSessionUser(fallbackName);
+}
+
 function mapRunRecord(run: AgentRunDto): AgentRun {
   return {
     id: String(run.id),
@@ -74,20 +75,6 @@ function mapRunRecord(run: AgentRunDto): AgentRun {
     risk_level: run.risk_level || undefined,
     messages: [],
   };
-}
-
-async function loginLive(email: string, password: string): Promise<User> {
-  const payload: LoginRequestDto = { email, password };
-  const { data } = await apiClient.post<TokenResponseDto>("/api/auth/login", payload);
-  setStoredToken(data.access_token);
-  return fetchSessionUser();
-}
-
-async function registerLive(email: string, password: string, full_name: string): Promise<User> {
-  const payload: RegisterRequestDto = { email, password };
-  const { data } = await apiClient.post<TokenResponseDto>("/api/auth/register", payload);
-  setStoredToken(data.access_token);
-  return fetchSessionUser(full_name);
 }
 
 async function submitOnboardingLive(data: OnboardingRequestDto): Promise<User> {
@@ -196,22 +183,6 @@ async function submitCheckInLive(data: CheckInSubmission): Promise<AgentRun> {
   return mapRunRecord(run);
 }
 
-async function loginMock(email: string, _password: string): Promise<User> {
-  await delay(600);
-  const user = email.includes("admin") ? mockAdmin : mockUser;
-  setStoredToken("mock-jwt-token");
-  setStoredUser(user);
-  return user;
-}
-
-async function registerMock(email: string, _password: string, full_name: string): Promise<User> {
-  await delay(600);
-  const user = { ...mockUser, email, full_name, onboarded: false };
-  setStoredToken("mock-jwt-token");
-  setStoredUser(user);
-  return user;
-}
-
 async function submitOnboardingMock(data: OnboardingRequestDto): Promise<User> {
   await delay(500);
   const user = getStoredUser() ?? mockUser;
@@ -277,14 +248,6 @@ async function submitCheckInMock(): Promise<AgentRun> {
 
 export function isMockApiEnabled() {
   return appConfig.useMockApi;
-}
-
-export async function login(email: string, password: string): Promise<User> {
-  return appConfig.useMockApi ? loginMock(email, password) : loginLive(email, password);
-}
-
-export async function register(email: string, password: string, full_name: string): Promise<User> {
-  return appConfig.useMockApi ? registerMock(email, password, full_name) : registerLive(email, password, full_name);
 }
 
 export { getStoredUser };
