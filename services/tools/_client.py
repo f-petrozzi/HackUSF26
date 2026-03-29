@@ -11,10 +11,13 @@ def api_request(
     path: str,
     api_base_url: str,
     auth_header: str,
+    demo_as: str = "",
     json_payload: Optional[Dict[str, Any]] = None,
     params: Optional[Dict[str, Any]] = None,
 ) -> Any:
     headers = {"Authorization": auth_header} if auth_header else {}
+    if demo_as:
+        headers["X-Demo-As"] = demo_as
     url = f"{api_base_url.rstrip('/')}{path}"
     last_exc: Exception | None = None
 

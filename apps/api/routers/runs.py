@@ -138,6 +138,7 @@ async def trigger_run(
         run_id=run.id,
         auth_header=request.headers.get("authorization", ""),
         api_base_url=coordinator_api_base_url(request),
+        demo_as=request.headers.get("x-demo-as", ""),
         scenario="live",
     )
     return run

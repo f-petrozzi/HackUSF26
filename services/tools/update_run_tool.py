@@ -14,6 +14,7 @@ def update_run(
     completed_at: Optional[str | datetime] = None,
     api_base_url: str,
     auth_header: str,
+    demo_as: str = "",
 ) -> Dict[str, Any]:
     if isinstance(completed_at, datetime):
         completed_value: Optional[str] = completed_at.isoformat()
@@ -33,5 +34,6 @@ def update_run(
         path=f"/api/runs/{run_id}",
         api_base_url=api_base_url,
         auth_header=auth_header,
+        demo_as=demo_as,
         json_payload=payload,
     )
