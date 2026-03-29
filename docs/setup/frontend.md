@@ -36,7 +36,7 @@ Optional frontend vars:
 
 ```bash
 VITE_API_URL=http://localhost:8000
-VITE_USE_MOCK_API=true
+VITE_USE_MOCK_API=false
 ```
 
 If you need local env files temporarily, copy `apps/web/.env.example` to `apps/web/.env.local`.
@@ -74,7 +74,7 @@ CLERK_SECRET_KEY=
 Notes:
 
 - `CLERK_SECRET_KEY` is needed for first-time local user provisioning unless your Clerk session token includes an email claim.
-- Mock API mode still works independently of backend auth and remains the easiest UI-development path.
+- Set `VITE_USE_MOCK_API=true` only when you explicitly want mock API data without exercising backend auth.
 
 ---
 

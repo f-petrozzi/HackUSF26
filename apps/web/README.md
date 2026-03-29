@@ -21,7 +21,7 @@ If you need a local file, copy `.env.example` to `.env.local` and set:
 
 ```bash
 VITE_API_URL=http://localhost:8000
-VITE_USE_MOCK_API=true
+VITE_USE_MOCK_API=false
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
 ```
 
@@ -29,7 +29,7 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
 
 - Clerk is wired into the frontend shell, route guards, and onboarding state.
 - Onboarding state is stored in Clerk user `unsafeMetadata`.
-- API data can still run in mock mode independently of auth.
+- Set `VITE_USE_MOCK_API=true` only when you intentionally want mock API data without exercising backend auth.
 - The FastAPI backend now accepts Clerk session tokens and no longer exposes password login/register routes.
 - First-time Clerk users are synced into the local `users` table automatically.
 - For first-time user provisioning, either set `CLERK_SECRET_KEY` on the backend or add an email claim to the Clerk session token.

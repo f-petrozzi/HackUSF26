@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,7 +13,8 @@ class Recipe(Base):
     __tablename__ = "recipes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    is_template: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     source_url: Mapped[str] = mapped_column(String(1000), nullable=False, default="")

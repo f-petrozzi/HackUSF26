@@ -91,7 +91,13 @@ class ActivityOut(BaseModel):
 class GarminAuthStatus(BaseModel):
     connected: bool
     user_id: Optional[int]
+    garmin_email: Optional[str] = None
     last_sync: Optional[datetime]
+
+
+class GarminConnectIn(BaseModel):
+    email: str
+    password: str
 
 
 class CalorieLogIn(BaseModel):

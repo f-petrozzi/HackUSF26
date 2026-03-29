@@ -77,7 +77,7 @@ def verify_clerk_session_token(token: str) -> dict[str, Any]:
 
 
 def _extract_email_from_claims(claims: dict[str, Any]) -> str | None:
-    for key in ("email", "primaryEmail", "primary_email", "primary_email_address"):
+    for key in ("email", "email_address", "primaryEmail", "primary_email", "primary_email_address"):
         value = claims.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip().lower()
@@ -95,21 +95,43 @@ def _extract_name_from_claims(claims: dict[str, Any]) -> str | None:
 async def _fetch_clerk_user(clerk_user_id: str) -> dict[str, Any]:
     if not settings.clerk_secret_key:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Clerk token is valid but user sync needs CLERK_SECRET_KEY or a custom email claim",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Backend cannot provision first-time Clerk users without CLERK_SECRET_KEY or a custom email claim",
         )
 
     headers = {
         "Authorization": f"Bearer {settings.clerk_secret_key}",
         "Content-Type": "application/json",
     }
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.get(f"https://api.clerk.com/v1/users/{clerk_user_id}", headers=headers)
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"https://api.clerk.com/v1/users/{clerk_user_id}", headers=headers)
+            response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Clerk user not found") from exc
+        if exc.response.status_code in (401, 403):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Backend CLERK_SECRET_KEY could not fetch Clerk users",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to fetch Clerk user details",
+        ) from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to reach Clerk while syncing the signed-in user",
+        ) from exc
 
-    if response.status_code == 404:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Clerk user not found")
-    response.raise_for_status()
-    data = response.json()
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Clerk returned an invalid user profile response",
+        ) from exc
 
     primary_email_id = data.get("primary_email_address_id")
     primary_email = None
