@@ -183,3 +183,116 @@ def test_coordinator_run_handles_partial_validation_patch_without_crashing(monke
     assert result["final_plan"]["activity_suggestion"] == "Take a short walk."
     assert result["final_plan"]["notes"] == "Validation updated the plan."
     assert result["intervention_record"]["meal_suggestion"] == "A balanced meal."
+
+
+def test_coordinator_persists_artifacts_for_run_owner_not_profile_user(monkeypatch):
+    pipeline = CareCoordinatorPipeline(Settings(), ToolProvider(use_stubs=True))
+    captured: dict[str, dict] = {}
+
+    monkeypatch.setattr(
+        pipeline.tool_provider,
+        "get_user_profile",
+        lambda persona_type="student": {
+            "user_id": 999,
+            "goal": "stress_reduction",
+            "dietary_style": "balanced",
+            "allergies": [],
+            "persona_type": "student",
+            "accessibility": None,
+        },
+    )
+    monkeypatch.setattr(
+        pipeline.tool_provider,
+        "get_recent_signals",
+        lambda scenario="stressed_student": [
+            {"signal_type": "stress_level", "value": 8},
+            {"signal_type": "sleep_hours", "value": 5.5},
+        ],
+    )
+    monkeypatch.setattr(
+        pipeline.tool_provider,
+        "get_resources",
+        lambda persona: [{"title": "Campus counseling"}],
+    )
+    monkeypatch.setattr(
+        pipeline.signal_agent,
+        "run",
+        lambda **_kwargs: {
+            "findings": [{"type": "stress", "severity": "high", "confidence": 0.9, "evidence": "check-in"}],
+            "summary": "High stress day.",
+            "generation_mode": "llm",
+            "generation_error": "",
+        },
+    )
+    monkeypatch.setattr(
+        pipeline.risk_agent,
+        "run",
+        lambda **_kwargs: {
+            "risk_level": "moderate",
+            "urgency": "today",
+            "escalation_needed": False,
+            "coordinator_review": False,
+            "confidence": 0.8,
+            "rationale": "Elevated stress.",
+            "generation_mode": "llm",
+            "generation_error": "",
+        },
+    )
+    monkeypatch.setattr(pipeline.intervention_agent, "run", lambda **_kwargs: _full_plan())
+    monkeypatch.setattr(
+        pipeline,
+        "_run_specialist",
+        lambda **_kwargs: {
+            "enriched_context": "",
+            "resources": [],
+            "intervention_adjustments": [],
+            "generation_mode": "llm",
+            "generation_error": "",
+        },
+    )
+    monkeypatch.setattr(
+        pipeline.empathy_agent,
+        "run",
+        lambda **_kwargs: {
+            "empathy_message": "Take it one step at a time.",
+            "generation_mode": "llm",
+            "generation_error": "",
+        },
+    )
+    monkeypatch.setattr(
+        pipeline.validation_loop,
+        "validate",
+        lambda **_kwargs: (
+            {
+                "approved": True,
+                "issues": [],
+                "revised_plan": None,
+                "halt": False,
+                "generation_mode": "llm",
+                "generation_error": "",
+            },
+            [],
+        ),
+    )
+    monkeypatch.setattr(
+        pipeline.tool_provider,
+        "create_intervention",
+        lambda payload: captured.setdefault("intervention", payload) or {"id": 1, **payload},
+    )
+    monkeypatch.setattr(
+        pipeline.tool_provider,
+        "create_case",
+        lambda payload: captured.setdefault("case", payload) or {"id": 2, **payload, "status": "open"},
+    )
+    monkeypatch.setattr(
+        pipeline.tool_provider,
+        "send_notification",
+        lambda payload: captured.setdefault("notification", payload) or {"id": 3, **payload, "status": "queued"},
+    )
+
+    result = pipeline.run(user_id="12", scenario="stressed_student", run_id=9)
+
+    assert captured["intervention"]["user_id"] == 12
+    assert captured["case"]["user_id"] == 12
+    assert captured["notification"]["user_id"] == 12
+    assert result["intervention_record"]["user_id"] == 12

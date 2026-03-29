@@ -213,6 +213,46 @@ async def test_admin_can_run_scenario_without_profile(admin_client: AsyncClient,
     assert run.user_id == 99
 
 
+async def test_member_intervention_creation_uses_run_owner_for_support_plan(
+    client: AsyncClient, db: AsyncSession
+):
+    norm = NormalizedEvent(user_id=1, signals={"stress_level": "8"}, summary="stress 8/10")
+    db.add(norm)
+    await db.flush()
+
+    run = AgentRun(user_id=1, normalized_event_id=norm.id, status="completed", risk_level="moderate")
+    db.add(run)
+    await db.commit()
+    await db.refresh(run)
+
+    create_resp = await client.post(
+        "/api/interventions",
+        json={
+            "user_id": 2,
+            "run_id": run.id,
+            "meal_suggestion": "Protein-forward breakfast",
+            "activity_suggestion": "10-minute walk",
+            "wellness_action": "Block 5 quiet minutes",
+            "empathy_message": "Start small today.",
+        },
+    )
+    assert create_resp.status_code == 201, create_resp.text
+    created = create_resp.json()
+    assert created["user_id"] == 1
+    assert created["run_id"] == run.id
+
+    list_resp = await client.get("/api/interventions")
+    assert list_resp.status_code == 200, list_resp.text
+    interventions = list_resp.json()
+    assert len(interventions) == 1
+    assert interventions[0]["user_id"] == 1
+    assert interventions[0]["run_id"] == run.id
+    assert interventions[0]["meal_suggestion"] == "Protein-forward breakfast"
+
+    persisted = (await db.execute(select(Intervention).where(Intervention.id == created["id"]))).scalar_one()
+    assert persisted.user_id == 1
+
+
 # ---------------------------------------------------------------------------
 # GET /api/runs/{run_id}  — trace access control
 # ---------------------------------------------------------------------------
