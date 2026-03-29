@@ -121,16 +121,36 @@ export interface HealthSummary {
   stress: { level: number; trend: number };
 }
 
+export interface RecipeIngredient {
+  name: string;
+  quantity: string;
+  category: string;
+  section: string;
+}
+
+export interface RecipeIngredientGroup {
+  group: string;
+  items: RecipeIngredient[];
+}
+
+export interface RecipeInstructionGroup {
+  group: string;
+  steps: string[];
+}
+
 export interface Recipe {
   id: string;
   title: string;
   description: string;
+  source_url: string;
+  our_way_notes: string;
   tags: string[];
   prep_time: number;
   cook_time: number;
   servings: number;
-  ingredients: { group: string; items: string[] }[];
-  instructions: { group: string; steps: string[] }[];
+  ingredients: RecipeIngredientGroup[];
+  ingredient_items: RecipeIngredient[];
+  instructions: RecipeInstructionGroup[];
   image_url?: string;
 }
 

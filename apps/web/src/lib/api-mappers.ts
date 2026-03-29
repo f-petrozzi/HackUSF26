@@ -20,6 +20,7 @@ import type {
   InterventionCard,
   PersonaType,
   Recipe,
+  RecipeIngredient,
   Scenario,
   Signal,
   SupportPlan,
@@ -118,13 +119,26 @@ function normalizePersona(persona: PersonaType | undefined): PersonaType | undef
   return persona;
 }
 
-function groupRecipeIngredients(recipe: RecipeDto): Recipe["ingredients"] {
-  const groups = new Map<string, string[]>();
-  for (const ingredient of recipe.ingredients) {
-    const group = ingredient.section || ingredient.category || "Ingredients";
-    const line = [ingredient.quantity, ingredient.name].filter(Boolean).join(" ").trim() || ingredient.name;
+function normalizeRecipeIngredient(ingredient: RecipeDto["ingredients"][number]): RecipeIngredient {
+  return {
+    name: ingredient.name?.trim() || "",
+    quantity: ingredient.quantity?.trim() || "",
+    category: ingredient.category?.trim() || "Other",
+    section: ingredient.section?.trim() || "",
+  };
+}
+
+function groupRecipeIngredients(ingredients: RecipeDto["ingredients"]): Recipe["ingredients"] {
+  if (!ingredients.length) return [];
+
+  const normalized = ingredients.map(normalizeRecipeIngredient);
+  const hasSections = normalized.some((ingredient) => ingredient.section);
+  const groups = new Map<string, RecipeIngredient[]>();
+
+  for (const ingredient of normalized) {
+    const group = hasSections ? ingredient.section || "Ingredients" : "Ingredients";
     if (!groups.has(group)) groups.set(group, []);
-    groups.get(group)!.push(line);
+    groups.get(group)!.push(ingredient);
   }
 
   return [...groups.entries()].map(([group, items]) => ({ group, items }));
@@ -278,17 +292,22 @@ export function mapHealthOverviewToSummary(overview: HealthOverviewDto): HealthS
 }
 
 export function mapRecipe(dto: RecipeDto): Recipe {
+  const ingredientItems = dto.ingredients.map(normalizeRecipeIngredient);
+
   return {
     id: String(dto.id),
     title: dto.title,
     description: dto.description,
+    source_url: dto.source_url,
+    our_way_notes: dto.our_way_notes,
     tags: dto.tags,
     prep_time: dto.prep_minutes,
     cook_time: dto.cook_minutes,
     servings: dto.servings,
-    ingredients: groupRecipeIngredients(dto),
+    ingredients: groupRecipeIngredients(dto.ingredients),
+    ingredient_items: ingredientItems,
     instructions: groupRecipeInstructions(dto.instructions),
-    image_url: dto.photo_filename || undefined,
+    image_url: dto.photo_filename ? `/uploads/${dto.photo_filename}` : undefined,
   };
 }
 
