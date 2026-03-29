@@ -106,6 +106,7 @@ def run_coordinator_for_run(
     run_id: int,
     auth_header: str,
     api_base_url: str,
+    demo_as: str = "",
     scenario: str = "live",
 ) -> None:
     tool_provider = None
@@ -122,6 +123,7 @@ def run_coordinator_for_run(
             use_stubs=False,
             api_base_url=api_base_url,
             auth_header=auth_header,
+            demo_as=demo_as,
         )
 
         tool_provider.update_run({"run_id": run_id, "status": "running"})

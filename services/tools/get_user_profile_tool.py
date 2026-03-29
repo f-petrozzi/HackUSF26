@@ -36,13 +36,14 @@ def _default_profile(persona_type: str, user_id: int = 0) -> Dict[str, Any]:
     }
 
 
-def _fallback_user_id(*, api_base_url: str, auth_header: str) -> int:
+def _fallback_user_id(*, api_base_url: str, auth_header: str, demo_as: str = "") -> int:
     try:
         me = api_request(
             method="GET",
             path="/api/auth/me",
             api_base_url=api_base_url,
             auth_header=auth_header,
+            demo_as=demo_as,
         )
     except RuntimeError:
         return 0
@@ -53,20 +54,27 @@ def _fallback_user_id(*, api_base_url: str, auth_header: str) -> int:
         return 0
 
 
-def get_user_profile(*, api_base_url: str, auth_header: str, fallback_persona: str = "student") -> Dict[str, Any]:
+def get_user_profile(
+    *,
+    api_base_url: str,
+    auth_header: str,
+    demo_as: str = "",
+    fallback_persona: str = "student",
+) -> Dict[str, Any]:
     try:
         profile = api_request(
             method="GET",
             path="/api/profile",
             api_base_url=api_base_url,
             auth_header=auth_header,
+            demo_as=demo_as,
         )
     except RuntimeError:
         # User has no profile (e.g. admin or coordinator accounts).
         # Return a synthetic profile so the coordinator pipeline can proceed.
         return _default_profile(
             fallback_persona,
-            user_id=_fallback_user_id(api_base_url=api_base_url, auth_header=auth_header),
+            user_id=_fallback_user_id(api_base_url=api_base_url, auth_header=auth_header, demo_as=demo_as),
         )
 
     try:
@@ -75,6 +83,7 @@ def get_user_profile(*, api_base_url: str, auth_header: str, fallback_persona: s
             path="/api/profile/accessibility",
             api_base_url=api_base_url,
             auth_header=auth_header,
+            demo_as=demo_as,
         )
         profile["accessibility"] = accessibility
     except RuntimeError:
