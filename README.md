@@ -102,30 +102,41 @@ Everything in `apps/api/` is built and ready:
 
 ### Person 2 — Google ADK Local Agents (`services/agents/`)
 
-**Branch off `main` after Fab merges. Work in `services/agents/`.**
+**Status: implemented and integrated. Work in `services/agents/`.**
 
-**What you're building:**
+**What this layer now does:**
 - `coordinator/` — SequentialAgent root that orchestrates the full pipeline
-- `signal_interpretation/` — LlmAgent analyzing signals → structured findings
-- `risk_stratification/` — LlmAgent → risk level (low/moderate/high/critical) + confidence
-- `intervention_planning/` — LlmAgent → meal, activity, wellness action
-- `empathy_checkin/` — LlmAgent → supportive user-facing language
-- `validation_loop/` — LoopAgent (max 3 iterations) checking for contradictions
+- `signal_interpretation/` — Gemini-backed structured findings generation
+- `risk_stratification/` — Gemini-backed risk, urgency, and escalation assessment
+- `intervention_planning/` — Gemini-backed meal, activity, and wellness planning
+- `empathy_checkin/` — Gemini-backed supportive user-facing language
+- `validation_loop/` — Gemini-first validation with rule-based fallback safety checks
+- `coordinator/` routes to real remote specialist services for `student` and `caregiver`
+- all agent stages persist run trace messages to the backend
 
-**Architecture rules (non-negotiable for judging):**
+**Architecture guarantees:**
 - `ParallelAgent` must wrap signal_interpretation, risk_stratification, and intervention_planning — not sequential calls
 - `LoopAgent` must be a real ADK LoopAgent — not a Python `for` loop
 - `RemoteA2aAgent` must be used for specialist calls — not direct imports
-- No agent imports SQLAlchemy — all DB access goes through tool calls (Person 3's layer)
+- no agent imports SQLAlchemy — all reads/writes go through the tool layer or specialist service calls
 
-**How to start without the backend running:**
-Use stubs — create `services/agents/dev_stubs.py` with hardcoded fixtures. See `docs/setup/agents.md` for the exact stub pattern. Swap for real tools at integration.
+**Current runtime behavior:**
+- local runs can still use `services/agents/dev_stubs.py` for isolated development
+- integrated runs use the real tool layer in `services/tools/`
+- backend routes now trigger the coordinator automatically after creating an `agent_run`
+- run traces persist `parallel`, `a2a`, `local`, and `loop` messages to `agent_messages`
+- each LLM-backed stage reports `generation_mode` and `generation_error` in its output for verification
+
+**How to verify it is using the real path:**
+- start the API plus both specialist services
+- trigger `/api/scenarios/stressed_student/run` or `/api/runs/trigger`
+- inspect `GET /api/runs/:id`
+- confirm each stage shows `generation_mode: "llm"` and `generation_error: ""`
+- confirm the specialist stage appears as `agent_type: "a2a"`
 
 **Data shapes:** See `packages/shared-types/models.py` and `docs/api-contracts.md`
 **Agent prompts:** See `docs/prompts.md`
 **Setup guide:** `docs/setup/agents.md`
-
-**Merge order:** after Fab and Person 3 have merged.
 
 ---
 
