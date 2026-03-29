@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import get_current_user
 from database import get_db
+from models.agents import Intervention
 from models.recipes import MealPlanSlot, Recipe
 from models.user import User
 from schemas.recipes import (
@@ -587,6 +588,45 @@ async def list_recipes(
         # JSONB @> operator: check if tags array contains the tag
         query = query.where(Recipe.tags.contains([tag]))
     result = await db.execute(query.order_by(Recipe.created_at.desc()))
+    return result.scalars().all()
+
+
+@router.get("/recommended", response_model=List[RecipeOut])
+async def recommended_recipes(
+    limit: int = Query(5, ge=1, le=20),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return template recipes matched against the meal_constraints from the user's
+    most recent intervention. Falls back to top template recipes if none exists.
+    """
+    # 1. Get latest intervention's meal_constraints
+    intervention_result = await db.execute(
+        select(Intervention)
+        .where(Intervention.user_id == user.id)
+        .order_by(Intervention.created_at.desc())
+        .limit(1)
+    )
+    intervention = intervention_result.scalar_one_or_none()
+    constraints: list[str] = (intervention.meal_constraints or []) if intervention else []
+
+    # 2. Query template recipes
+    base_query = select(Recipe).where(Recipe.is_template.is_(True))
+
+    if constraints:
+        # Score by number of overlapping tags — fetch templates and filter in Python
+        # (avoids complex SQL for hackathon simplicity)
+        all_templates = (await db.execute(base_query)).scalars().all()
+        constraint_set = set(constraints)
+        scored = sorted(
+            all_templates,
+            key=lambda r: len(constraint_set.intersection(set(r.tags or []))),
+            reverse=True,
+        )
+        return scored[:limit]
+
+    result = await db.execute(base_query.order_by(Recipe.id).limit(limit))
     return result.scalars().all()
 
 

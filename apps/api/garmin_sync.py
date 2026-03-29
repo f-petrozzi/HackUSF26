@@ -24,6 +24,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import AsyncSessionLocal
+from models.events import NormalizedEvent
 from models.health import (
     HealthActivity,
     HealthDailyMetrics,
@@ -159,6 +160,34 @@ async def _get_client(user_id: int) -> Any | None:
 
 def get_connected_user_ids() -> list[int]:
     return list(_garmin_clients.keys())
+
+
+async def connect_user(user_id: int, email: str, password: str) -> None:
+    """
+    Authenticate a specific user's Garmin account and register the client.
+    Dumps OAuth tokens to disk for future token-only logins.
+    Raises on authentication failure so the caller can return a 400.
+    """
+    tdir = _token_dir(user_id)
+    _ensure_private_dir(settings.garmin_token_dir)
+    _ensure_private_dir(tdir)
+    async with _client_lock:
+        client = await asyncio.to_thread(_load_garmin_client_sync, email, password, tdir)
+        _garmin_clients[user_id] = client
+    logger.info("Garmin connected for user_id=%s (%s)", user_id, email)
+
+
+async def disconnect_user(user_id: int) -> None:
+    """Remove the in-memory client and delete cached tokens from disk."""
+    import shutil
+
+    async with _client_lock:
+        _garmin_clients.pop(user_id, None)
+    _cache_invalidate(user_id)
+    tdir = _token_dir(user_id)
+    if os.path.exists(tdir):
+        await asyncio.to_thread(shutil.rmtree, tdir, ignore_errors=True)
+    logger.info("Garmin disconnected for user_id=%s", user_id)
 
 
 # ---------------------------------------------------------------------------
@@ -542,7 +571,78 @@ async def sync_user_range(
 
     await db.commit()
     _cache_invalidate(user_id)
+
+    # Project latest day's data into a NormalizedEvent so the agent pipeline
+    # can read real Garmin signals via /api/events/recent.
+    try:
+        await _emit_health_snapshot_event(db, user_id, today.isoformat())
+        await db.commit()
+    except Exception as exc:
+        logger.warning("NormalizedEvent emission failed user=%s: %s", user_id, exc)
+
     return counts
+
+
+async def _emit_health_snapshot_event(db: AsyncSession, user_id: int, date_str: str) -> None:
+    """Write a NormalizedEvent summarising today's health metrics for the agent layer."""
+    result = await db.execute(
+        select(HealthDailyMetrics)
+        .where(HealthDailyMetrics.user_id == user_id, HealthDailyMetrics.metric_date == date_str)
+        .limit(1)
+    )
+    metrics = result.scalar_one_or_none()
+
+    sleep_result = await db.execute(
+        select(HealthSleepSession)
+        .where(HealthSleepSession.user_id == user_id, HealthSleepSession.sleep_date == date_str)
+        .limit(1)
+    )
+    sleep = sleep_result.scalar_one_or_none()
+
+    signals: dict = {}
+    if metrics:
+        signals.update({
+            "steps": metrics.steps,
+            "step_goal": metrics.step_goal,
+            "active_calories": metrics.active_calories,
+            "resting_hr": metrics.resting_hr,
+            "body_battery_high": metrics.body_battery_high,
+            "body_battery_low": metrics.body_battery_low,
+            "stress_level": metrics.stress_avg,
+            "hrv_weekly_avg": metrics.hrv_weekly_avg,
+            "hrv_status": metrics.hrv_status,
+            "vo2_max": metrics.vo2_max,
+            "active_minutes": metrics.active_minutes,
+        })
+    if sleep:
+        sleep_hours = round(sleep.duration_seconds / 3600, 2) if sleep.duration_seconds else 0
+        signals.update({
+            "sleep_hours": sleep_hours,
+            "sleep_score": sleep.sleep_score,
+            "deep_sleep_minutes": sleep.deep_seconds // 60,
+            "rem_sleep_minutes": sleep.rem_seconds // 60,
+            "avg_spo2": sleep.avg_spo2,
+        })
+
+    if not signals:
+        return
+
+    summary_parts = []
+    if "steps" in signals:
+        summary_parts.append(f"steps={signals['steps']}")
+    if "sleep_hours" in signals:
+        summary_parts.append(f"sleep={signals['sleep_hours']}h")
+    if "stress_level" in signals:
+        summary_parts.append(f"stress={signals['stress_level']}")
+    if "body_battery_high" in signals:
+        summary_parts.append(f"battery_high={signals['body_battery_high']}")
+
+    event = NormalizedEvent(
+        user_id=user_id,
+        signals=signals,
+        summary=f"Garmin sync {date_str}: " + ", ".join(summary_parts),
+    )
+    db.add(event)
 
 
 async def run_manual_sync(user_id: int, days_back: int = 7) -> dict:

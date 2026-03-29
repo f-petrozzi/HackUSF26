@@ -69,6 +69,7 @@ class InterventionDraft(Dumpable):
     generation_error: str = ""
     resources: List[str] = field(default_factory=list)
     notes: str = ""
+    meal_constraints: List[str] = field(default_factory=list)
 
 
 @dataclass

@@ -13,8 +13,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import get_current_user
 from database import get_db
-from garmin_sync import _cache_get, _cache_set, get_connected_user_ids, run_manual_sync, settings
+from garmin_sync import (
+    _cache_get,
+    _cache_set,
+    connect_user,
+    disconnect_user,
+    get_connected_user_ids,
+    run_manual_sync,
+    settings,
+)
 from models.health import (
+    GarminConnection,
     HealthActivity,
     HealthCalorieLog,
     HealthDailyMetrics,
@@ -30,6 +39,7 @@ from schemas.health import (
     CalorieLogOut,
     DailyMetricsOut,
     GarminAuthStatus,
+    GarminConnectIn,
     HealthOverviewOut,
     SleepSessionOut,
 )
@@ -159,21 +169,82 @@ async def garmin_auth_status(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    connected = user.id in get_connected_user_ids() or 0 in get_connected_user_ids()
+    # Check both in-memory client registry and DB connection record
+    in_memory = user.id in get_connected_user_ids() or 0 in get_connected_user_ids()
+    conn_result = await db.execute(
+        select(GarminConnection).where(GarminConnection.user_id == user.id)
+    )
+    conn_row = conn_result.scalar_one_or_none()
+    connected = in_memory or conn_row is not None
 
-    last_sync = None
-    if connected:
-        result = await db.execute(
+    last_sync = conn_row.last_sync_at if conn_row else None
+    if connected and last_sync is None:
+        run_result = await db.execute(
             select(HealthSyncRun)
             .where(HealthSyncRun.user_id == user.id, HealthSyncRun.status == "success")
             .order_by(HealthSyncRun.finished_at.desc())
             .limit(1)
         )
-        run = result.scalar_one_or_none()
+        run = run_result.scalar_one_or_none()
         if run:
             last_sync = run.finished_at
 
-    return GarminAuthStatus(connected=connected, user_id=user.id if connected else None, last_sync=last_sync)
+    return GarminAuthStatus(
+        connected=connected,
+        user_id=user.id if connected else None,
+        garmin_email=conn_row.garmin_email if conn_row else None,
+        last_sync=last_sync,
+    )
+
+
+@router.post("/garmin/connect", response_model=GarminAuthStatus, status_code=201)
+async def garmin_connect(
+    body: GarminConnectIn,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Link a Garmin account to this user. Authenticates immediately and caches tokens."""
+    if not settings.garmin_enabled:
+        raise HTTPException(status_code=400, detail="Garmin integration is not enabled in server config")
+    try:
+        await connect_user(user.id, body.email, body.password)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Garmin authentication failed: {exc}") from exc
+
+    now = datetime.now(timezone.utc)
+    # Upsert connection record
+    conn_result = await db.execute(
+        select(GarminConnection).where(GarminConnection.user_id == user.id)
+    )
+    conn_row = conn_result.scalar_one_or_none()
+    if conn_row:
+        conn_row.garmin_email = body.email
+        conn_row.connected_at = now
+    else:
+        conn_row = GarminConnection(user_id=user.id, garmin_email=body.email, connected_at=now)
+        db.add(conn_row)
+    await db.commit()
+    await db.refresh(conn_row)
+
+    return GarminAuthStatus(
+        connected=True,
+        user_id=user.id,
+        garmin_email=conn_row.garmin_email,
+        last_sync=None,
+    )
+
+
+@router.delete("/garmin/disconnect", status_code=204)
+async def garmin_disconnect(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Unlink Garmin — removes in-memory client, token files, and DB record."""
+    await disconnect_user(user.id)
+    await db.execute(
+        delete(GarminConnection).where(GarminConnection.user_id == user.id)
+    )
+    await db.commit()
 
 
 # ---------------------------------------------------------------------------

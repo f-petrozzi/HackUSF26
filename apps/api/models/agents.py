@@ -71,6 +71,7 @@ class Intervention(Base):
     activity_suggestion: Mapped[str] = mapped_column(Text, nullable=False, default="")
     wellness_action: Mapped[str] = mapped_column(Text, nullable=False, default="")
     empathy_message: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    meal_constraints: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )

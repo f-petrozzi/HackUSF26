@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -102,6 +102,21 @@ class HealthSyncRun(Base):
     sleep_upserted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     details_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+
+
+class GarminConnection(Base):
+    """Per-user Garmin account linkage. Presence of token files on disk is the
+    authoritative "connected" state; this row is the registry/metadata layer."""
+    __tablename__ = "garmin_connections"
+
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, nullable=False
+    )
+    garmin_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    connected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class HealthCalorieLog(Base):
