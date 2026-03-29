@@ -1,47 +1,32 @@
-"""Tool: persist the final intervention plan to the API."""
-from google.adk.tools import FunctionTool
-from ._http import post
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+from services.tools._client import api_request
 
 
 def create_intervention(
+    *,
     user_id: int,
-    run_id: int,
+    run_id: Optional[int],
     meal_suggestion: str,
     activity_suggestion: str,
     wellness_action: str,
     empathy_message: str,
-    token: str,
-) -> dict:
-    """
-    Persist the intervention plan produced by the agent pipeline.
-
-    Args:
-        user_id: ID of the user.
-        run_id: ID of the agent run.
-        meal_suggestion: Meal recommendation text.
-        activity_suggestion: Activity recommendation text.
-        wellness_action: Wellness action text.
-        empathy_message: User-facing empathy message.
-        token: JWT access token.
-
-    Returns:
-        Intervention dict or error dict.
-    """
-    try:
-        return post(
-            "/api/interventions",
-            body={
-                "user_id": user_id,
-                "run_id": run_id,
-                "meal_suggestion": meal_suggestion,
-                "activity_suggestion": activity_suggestion,
-                "wellness_action": wellness_action,
-                "empathy_message": empathy_message,
-            },
-            token=token,
-        )
-    except Exception as exc:
-        return {"error": str(exc)}
-
-
-create_intervention_tool = FunctionTool(create_intervention)
+    api_base_url: str,
+    auth_header: str,
+) -> Dict[str, Any]:
+    return api_request(
+        method="POST",
+        path="/api/interventions",
+        api_base_url=api_base_url,
+        auth_header=auth_header,
+        json_payload={
+            "user_id": user_id,
+            "run_id": run_id,
+            "meal_suggestion": meal_suggestion,
+            "activity_suggestion": activity_suggestion,
+            "wellness_action": wellness_action,
+            "empathy_message": empathy_message,
+        },
+    )

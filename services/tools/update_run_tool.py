@@ -1,36 +1,37 @@
-"""Tool: update an agent run's status and risk level."""
-from typing import Optional
-from google.adk.tools import FunctionTool
-from ._http import put
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any, Dict, Optional
+
+from services.tools._client import api_request
 
 
 def update_run(
+    *,
     run_id: int,
-    token: str,
     status: Optional[str] = None,
     risk_level: Optional[str] = None,
-) -> dict:
-    """
-    Update the status and/or risk level of an agent run.
+    completed_at: Optional[str | datetime] = None,
+    api_base_url: str,
+    auth_header: str,
+) -> Dict[str, Any]:
+    if isinstance(completed_at, datetime):
+        completed_value: Optional[str] = completed_at.isoformat()
+    else:
+        completed_value = completed_at
 
-    Args:
-        run_id: ID of the agent run to update.
-        token: JWT access token.
-        status: New status — one of "pending", "running", "completed", "failed".
-        risk_level: Risk level — one of "low", "moderate", "high", "critical".
-
-    Returns:
-        Updated AgentRun dict or error dict.
-    """
-    body = {}
+    payload: Dict[str, Any] = {}
     if status is not None:
-        body["status"] = status
+        payload["status"] = status
     if risk_level is not None:
-        body["risk_level"] = risk_level
-    try:
-        return put(f"/api/runs/{run_id}", body=body, token=token)
-    except Exception as exc:
-        return {"error": str(exc)}
+        payload["risk_level"] = risk_level
+    if completed_value is not None:
+        payload["completed_at"] = completed_value
 
-
-update_run_tool = FunctionTool(update_run)
+    return api_request(
+        method="PUT",
+        path=f"/api/runs/{run_id}",
+        api_base_url=api_base_url,
+        auth_header=auth_header,
+        json_payload=payload,
+    )

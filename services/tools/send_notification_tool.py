@@ -1,29 +1,22 @@
-"""Tool: send a notification to a user via the API."""
-from google.adk.tools import FunctionTool
-from ._http import post
+from __future__ import annotations
+
+from typing import Any, Dict
+
+from services.tools._client import api_request
 
 
-def send_notification(user_id: int, type: str, content: str, token: str) -> dict:
-    """
-    Send a notification to the user.
-
-    Args:
-        user_id: ID of the user to notify.
-        type: Notification type, e.g. "intervention_ready".
-        content: Human-readable notification body.
-        token: JWT access token.
-
-    Returns:
-        Notification dict or error dict.
-    """
-    try:
-        return post(
-            "/api/notifications",
-            body={"user_id": user_id, "type": type, "content": content},
-            token=token,
-        )
-    except Exception as exc:
-        return {"error": str(exc)}
-
-
-send_notification_tool = FunctionTool(send_notification)
+def send_notification(
+    *,
+    user_id: int,
+    type: str,
+    content: str,
+    api_base_url: str,
+    auth_header: str,
+) -> Dict[str, Any]:
+    return api_request(
+        method="POST",
+        path="/api/notifications",
+        api_base_url=api_base_url,
+        auth_header=auth_header,
+        json_payload={"user_id": user_id, "type": type, "content": content},
+    )

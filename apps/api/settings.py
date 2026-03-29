@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 10080  # 1 week
 
+    # Clerk
+    clerk_secret_key: str = ""
+    clerk_jwt_key: str = ""
+    clerk_frontend_api_url: str = ""
+    clerk_jwks_url: str = ""
+    clerk_authorized_parties: str = ""
+
     # Gemini
     gemini_api_key: str = ""
 

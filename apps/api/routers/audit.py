@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 from pydantic import Field
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import get_current_user

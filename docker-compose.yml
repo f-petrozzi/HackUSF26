@@ -25,13 +25,43 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://caremesh:caremesh@db:5432/caremesh
+      CAREMESH_REPO_ROOT: /workspace
+      STUDENT_SPECIALIST_URL: http://specialist-student:8001
+      CAREGIVER_SPECIALIST_URL: http://specialist-caregiver:8002
     volumes:
       - ./apps/api:/app
+      - ./:/workspace
       - garmin_tokens:/app/garmin_tokens
     depends_on:
       db:
         condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  specialist-student:
+    image: python:3.11-slim
+    working_dir: /workspace
+    environment:
+      CAREMESH_REPO_ROOT: /workspace
+    env_file:
+      - apps/api/.env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./:/workspace
+    command: sh -c "pip install --no-cache-dir fastapi uvicorn httpx google-generativeai && uvicorn services.remote_specialists.student_support.app:app --host 0.0.0.0 --port 8001 --reload"
+
+  specialist-caregiver:
+    image: python:3.11-slim
+    working_dir: /workspace
+    environment:
+      CAREMESH_REPO_ROOT: /workspace
+    env_file:
+      - apps/api/.env
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./:/workspace
+    command: sh -c "pip install --no-cache-dir fastapi uvicorn httpx google-generativeai && uvicorn services.remote_specialists.caregiver_burnout.app:app --host 0.0.0.0 --port 8002 --reload"
 
   web:
     build:
@@ -43,6 +73,8 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       - api
+      - specialist-student
+      - specialist-caregiver
 
   specialist-student:
     build:
