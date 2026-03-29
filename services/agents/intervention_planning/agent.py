@@ -41,7 +41,8 @@ class InterventionPlanningAgent:
         signals: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, object]:
         findings = findings or []
-        risk_level = risk_level or self._derive_risk_level(signals or {})
+        signals = signals or {}
+        risk_level = risk_level or self._derive_risk_level(signals)
         llm_plan = self._generate_with_llm(
             persona_type=persona_type,
             goal=goal,
@@ -50,7 +51,7 @@ class InterventionPlanningAgent:
             resources=resources,
             findings=findings,
             risk_level=risk_level,
-            signals=signals or {},
+            signals=signals,
         )
         if llm_plan:
             return llm_plan
@@ -78,6 +79,12 @@ class InterventionPlanningAgent:
             f"Plan tuned for {persona_type}; allergies considered: "
             f"{', '.join(allergies) if allergies else 'none'}."
         )
+        meal_constraints = self._derive_meal_constraints(
+            dietary_style=dietary_style,
+            allergies=allergies,
+            risk_level=risk_level,
+            signals=signals,
+        )
         return InterventionDraft(
             meal_suggestion=meal,
             activity_suggestion=activity,
@@ -86,7 +93,36 @@ class InterventionPlanningAgent:
             generation_error=self._last_generation_error,
             resources=resources,
             notes=notes,
+            meal_constraints=meal_constraints,
         ).model_dump()
+
+    @staticmethod
+    def _derive_meal_constraints(
+        *,
+        dietary_style: str,
+        allergies: List[str],
+        risk_level: str,
+        signals: Dict[str, Any],
+    ) -> List[str]:
+        constraints: list[str] = []
+        if dietary_style and dietary_style not in {"none", ""}:
+            constraints.append(dietary_style)
+        for allergy in allergies:
+            constraints.append(f"avoid_{allergy.lower().replace(' ', '_')}")
+        stress = float(signals.get("stress_level", 0) or 0)
+        sleep_h = float(signals.get("sleep_hours", 7) or 7)
+        steps = int(signals.get("steps", 0) or 0)
+        if risk_level in {"high", "critical"} or stress >= 7:
+            constraints.append("comforting")
+            constraints.append("low_prep")
+        if sleep_h < 6:
+            constraints.append("hydration_support")
+            constraints.append("high_protein")
+        if steps > 10000:
+            constraints.append("high_calorie")
+        elif steps < 3000 and steps > 0:
+            constraints.append("light")
+        return sorted(set(constraints))
 
     @staticmethod
     def _derive_risk_level(signals: Dict[str, Any]) -> str:
@@ -191,6 +227,7 @@ class InterventionPlanningAgent:
                 "description": "1-2 sentence wellness action",
                 "rationale": "why this action fits the condition",
             },
+            "meal_constraints": ["tag1", "tag2"],
             "resources": ["resource title"],
             "notes": "brief planning notes",
         }
@@ -248,6 +285,9 @@ class InterventionPlanningAgent:
             }
         )
         notes = str(payload.get("notes", "")).strip() or f"Plan tuned for {persona_type}."
+        meal_constraints = sorted(
+            {str(c).strip().lower() for c in (payload.get("meal_constraints") or []) if str(c).strip()}
+        )
 
         return InterventionDraft(
             meal_suggestion=MealSuggestion(
@@ -271,4 +311,5 @@ class InterventionPlanningAgent:
             generation_error="",
             resources=merged_resources,
             notes=notes,
+            meal_constraints=meal_constraints,
         ).model_dump()

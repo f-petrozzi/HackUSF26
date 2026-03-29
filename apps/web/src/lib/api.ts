@@ -1,5 +1,3 @@
-import axios from "axios";
-
 import { apiClient, clearStoredSession, getStoredUser, setStoredUser } from "@/lib/api-client";
 import type {
   AgentRunDto,
@@ -41,20 +39,19 @@ import type { AgentRun, Case, HealthSummary, Recipe, Scenario, Signal, SupportPl
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function isNotFound(error: unknown): boolean {
-  return axios.isAxiosError(error) && error.response?.status === 404;
+async function fetchProfileIfAvailable(): Promise<ProfileDto | null> {
+  try {
+    const response = await apiClient.get<ProfileDto>("/api/profile");
+    return response.data;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchSessionUser(fallbackName?: string): Promise<User> {
   const { data: me } = await apiClient.get<AuthMeDto>("/api/auth/me");
 
-  let profile: ProfileDto | null = null;
-  try {
-    const response = await apiClient.get<ProfileDto>("/api/profile");
-    profile = response.data;
-  } catch (error) {
-    if (!isNotFound(error)) throw error;
-  }
+  const profile = await fetchProfileIfAvailable();
 
   const user = mapUserFromBackend(me, profile, fallbackName || getStoredUser()?.full_name);
   setStoredUser(user);
