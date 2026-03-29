@@ -41,8 +41,12 @@ const KNOWN_AGENT_NAMES: Record<string, AgentName> = {
   validationloop: "validation_loop",
   validation_loop: "validation_loop",
   studentsupport: "student_support",
+  studentsupportspecialist: "student_support",
+  studentsupportfallback: "student_support",
   student_support: "student_support",
   caregiverburnout: "caregiver_burnout",
+  caregiverburnoutspecialist: "caregiver_burnout",
+  caregiverburnoutfallback: "caregiver_burnout",
   caregiver_burnout: "caregiver_burnout",
 };
 

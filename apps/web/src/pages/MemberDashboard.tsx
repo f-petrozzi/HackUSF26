@@ -38,6 +38,7 @@ export default function MemberDashboard() {
   });
   const latestRun = runs?.[0];
   const awaitingLatestPlan = latestRun?.status === "pending" || latestRun?.status === "running";
+  const latestRunFailed = latestRun?.status === "failed";
   const { data: plan } = useQuery({
     queryKey: ["supportPlan", latestRun?.id ?? "none", latestRun?.status ?? "idle"],
     queryFn: getSupportPlan,
@@ -80,6 +81,12 @@ export default function MemberDashboard() {
       >
         <p className="text-sm leading-relaxed text-accent-foreground">{displayPlan.empathy_message}</p>
       </motion.div>
+
+      {latestRunFailed ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-muted-foreground">
+          Your latest run failed before a new plan was produced. This dashboard is still showing the last successful plan.
+        </div>
+      ) : null}
 
       {/* Signal Chips */}
       {signals && (

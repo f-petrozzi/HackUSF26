@@ -9,6 +9,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from services.agents.config import Settings
 from services.agents.coordinator.agent import CareCoordinatorPipeline
+from services.agents.runtime import AgentType
 from services.agents.tooling import ToolProvider
 from services.agents.validation_loop.agent import ValidationLoopAgent
 
@@ -141,13 +142,17 @@ def test_coordinator_run_handles_partial_validation_patch_without_crashing(monke
     monkeypatch.setattr(
         pipeline,
         "_run_specialist",
-        lambda **_kwargs: {
-            "enriched_context": "",
-            "resources": [],
-            "intervention_adjustments": [],
-            "generation_mode": "llm",
-            "generation_error": "",
-        },
+        lambda **_kwargs: (
+            "StudentSupportSpecialist",
+            AgentType.a2a,
+            {
+                "enriched_context": "",
+                "resources": [],
+                "intervention_adjustments": [],
+                "generation_mode": "llm",
+                "generation_error": "",
+            },
+        ),
     )
     monkeypatch.setattr(
         pipeline.empathy_agent,
@@ -242,13 +247,17 @@ def test_coordinator_persists_artifacts_for_run_owner_not_profile_user(monkeypat
     monkeypatch.setattr(
         pipeline,
         "_run_specialist",
-        lambda **_kwargs: {
-            "enriched_context": "",
-            "resources": [],
-            "intervention_adjustments": [],
-            "generation_mode": "llm",
-            "generation_error": "",
-        },
+        lambda **_kwargs: (
+            "StudentSupportSpecialist",
+            AgentType.a2a,
+            {
+                "enriched_context": "",
+                "resources": [],
+                "intervention_adjustments": [],
+                "generation_mode": "llm",
+                "generation_error": "",
+            },
+        ),
     )
     monkeypatch.setattr(
         pipeline.empathy_agent,
@@ -296,3 +305,42 @@ def test_coordinator_persists_artifacts_for_run_owner_not_profile_user(monkeypat
     assert captured["case"]["user_id"] == 12
     assert captured["notification"]["user_id"] == 12
     assert result["intervention_record"]["user_id"] == 12
+
+
+def test_run_specialist_falls_back_locally_when_remote_service_is_unavailable(monkeypatch):
+    pipeline = CareCoordinatorPipeline(Settings(), ToolProvider(use_stubs=True))
+
+    monkeypatch.setattr(
+        pipeline.tool_provider,
+        "get_resources",
+        lambda persona: [{"title": "Campus counseling"}],
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "_invoke_remote_specialist",
+        lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("connect timeout")),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "_generate_local_specialist",
+        lambda **kwargs: {
+            "enriched_context": "Local fallback used.",
+            "resources": kwargs["resources"],
+            "intervention_adjustments": ["Use the local specialist fallback."],
+            "generation_mode": "llm_fallback",
+            "generation_error": kwargs["upstream_error"],
+        },
+    )
+
+    name, agent_type, result = pipeline._run_specialist(
+        persona_type="student",
+        findings=[],
+        risk={"risk_level": "moderate"},
+        draft_plan=_full_plan(),
+        specialist_agent=pipeline._specialist_for("student"),
+    )
+
+    assert name == "StudentSupportFallback"
+    assert agent_type == AgentType.local
+    assert result["generation_mode"] == "llm_fallback"
+    assert "connect timeout" in result["generation_error"]

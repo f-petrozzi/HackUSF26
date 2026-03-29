@@ -86,24 +86,205 @@ class CareCoordinatorPipeline:
         risk: Dict[str, Any],
         draft_plan: Dict[str, Any],
         specialist_agent: RemoteA2aAgent | None,
-    ) -> Dict[str, Any]:
+    ) -> tuple[str, AgentType, Dict[str, Any]]:
         resources = [item["title"] for item in self.tool_provider.get_resources(persona_type)]
         if specialist_agent:
-            return self._invoke_remote_specialist(
-                specialist_agent=specialist_agent,
+            try:
+                return (
+                    specialist_agent.name,
+                    AgentType.a2a,
+                    self._invoke_remote_specialist(
+                        specialist_agent=specialist_agent,
+                        persona_type=persona_type,
+                        findings=findings,
+                        risk=risk,
+                        draft_plan=draft_plan,
+                        resources=resources,
+                    ),
+                )
+            except Exception as exc:
+                fallback_name = (
+                    "StudentSupportFallback"
+                    if persona_type == "student"
+                    else "CaregiverBurnoutFallback"
+                )
+                return (
+                    fallback_name,
+                    AgentType.local,
+                    self._generate_local_specialist(
+                        persona_type=persona_type,
+                        findings=findings,
+                        risk=risk,
+                        draft_plan=draft_plan,
+                        resources=resources,
+                        upstream_error=f"{type(exc).__name__}: {exc}",
+                    ),
+                )
+        return (
+            "AccessibilityAdaptation",
+            AgentType.local,
+            self._generate_local_specialist(
                 persona_type=persona_type,
                 findings=findings,
                 risk=risk,
                 draft_plan=draft_plan,
                 resources=resources,
-            )
-        return self._generate_local_accessibility_specialist(
-            persona_type=persona_type,
-            findings=findings,
-            risk=risk,
-            draft_plan=draft_plan,
-            resources=resources,
+            ),
         )
+
+    @staticmethod
+    def _specialist_prompt_bundle(persona_type: str) -> tuple[str, Dict[str, Any], Dict[str, Any]]:
+        if persona_type == "student":
+            return (
+                (
+                    "You are the Student Support Specialist for CareMesh. "
+                    "You receive signal findings, risk level, an intervention draft, "
+                    "and available campus resources. Return structured JSON only. "
+                    "Interpret the case in the context of academic overload, exam pressure, "
+                    "and student recovery; strengthen the intervention with realistic, "
+                    "low-pressure student-specific adjustments; include campus-specific resources "
+                    "already provided when relevant; and flag burnout risk when the case suggests "
+                    "sustained academic overload."
+                ),
+                {
+                    "enriched_context": "student-specific interpretation",
+                    "resources": ["resource title"],
+                    "intervention_adjustments": ["specific change"],
+                    "burnout_risk_flag": True,
+                    "escalation_recommendation": "none | coordinator_review",
+                },
+                {
+                    "enriched_context": "Stress pattern aligns with academic overload and low recovery.",
+                    "intervention_adjustments": [
+                        "Favor low-pressure study-break framing.",
+                        "Include campus counseling and academic support options.",
+                    ],
+                    "burnout_risk_flag": None,
+                    "escalation_recommendation": None,
+                },
+            )
+
+        if persona_type == "caregiver":
+            return (
+                (
+                    "You are the Caregiver Burnout Specialist for CareMesh. "
+                    "You receive signal findings, risk level, an intervention draft, "
+                    "and available support resources. Return structured JSON only. "
+                    "Interpret the case through caregiver burden and depleted recovery capacity; "
+                    "adjust interventions to be micro-effort and realistic under time scarcity; "
+                    "surface support-group or respite resources from the provided list when relevant; "
+                    "and recommend coordinator escalation when burden is high."
+                ),
+                {
+                    "enriched_context": "caregiver-specific interpretation",
+                    "resources": ["resource title"],
+                    "intervention_adjustments": ["specific change"],
+                    "burnout_risk_flag": True,
+                    "escalation_recommendation": "none | coordinator_review | trusted_contact_outreach",
+                },
+                {
+                    "enriched_context": "Signals suggest caregiver burden with limited recovery capacity.",
+                    "intervention_adjustments": [
+                        "Favor micro-effort actions with no equipment.",
+                        "Include respite and support-group resources.",
+                    ],
+                    "burnout_risk_flag": True,
+                    "escalation_recommendation": None,
+                },
+            )
+
+        return (
+            (
+                "You are the Accessibility Adaptation Specialist for CareMesh. "
+                "Return structured JSON only. Keep the plan simple, accessible, and low-friction "
+                "for older adults or accessibility-focused users."
+            ),
+            {
+                "enriched_context": "short interpretation",
+                "resources": ["resource title"],
+                "intervention_adjustments": ["specific change"],
+                "burnout_risk_flag": False,
+                "escalation_recommendation": "none | coordinator_review",
+            },
+            {
+                "enriched_context": "Accessibility-focused adaptation kept the plan simple and easy to follow.",
+                "intervention_adjustments": ["Keep plan simple and accessible."],
+                "burnout_risk_flag": None,
+                "escalation_recommendation": "none",
+            },
+        )
+
+    @staticmethod
+    def _combine_generation_error(upstream_error: str, generation_error: str) -> str:
+        parts = [part.strip() for part in (upstream_error, generation_error) if part and part.strip()]
+        return " | ".join(parts)
+
+    def _generate_local_specialist(
+        self,
+        *,
+        persona_type: str,
+        findings: List[Dict[str, Any]],
+        risk: Dict[str, Any],
+        draft_plan: Dict[str, Any],
+        resources: List[str],
+        upstream_error: str = "",
+    ) -> Dict[str, Any]:
+        instruction, response_schema, fallback = self._specialist_prompt_bundle(persona_type)
+        fallback_resources = sorted(set(resources))
+        fallback_burnout = fallback["burnout_risk_flag"]
+        if fallback_burnout is None:
+            fallback_burnout = risk.get("risk_level") in {"moderate", "high", "critical"}
+
+        fallback_escalation = fallback["escalation_recommendation"]
+        if fallback_escalation is None:
+            fallback_escalation = (
+                "coordinator_review"
+                if risk.get("risk_level") in {"high", "critical"}
+                else "none"
+            )
+
+        prompt = build_json_prompt(
+            instruction=instruction,
+            response_schema=response_schema,
+            payload={
+                "persona_type": persona_type,
+                "findings": findings,
+                "risk": risk,
+                "draft_plan": draft_plan,
+                "resources": resources,
+            },
+        )
+        result = self._llm.generate_json(prompt)
+        if result.payload:
+            try:
+                return SpecialistResult(
+                    enriched_context=str(result.payload.get("enriched_context", "")).strip(),
+                    resources=sorted(set(fallback_resources + result.payload.get("resources", []))),
+                    intervention_adjustments=[
+                        str(item).strip()
+                        for item in result.payload.get("intervention_adjustments", [])
+                        if str(item).strip()
+                    ],
+                    burnout_risk_flag=result.payload.get("burnout_risk_flag"),
+                    escalation_recommendation=result.payload.get("escalation_recommendation"),
+                    generation_mode="llm_fallback" if upstream_error else "llm",
+                    generation_error=self._combine_generation_error(upstream_error, ""),
+                ).model_dump()
+            except Exception as exc:
+                upstream_error = self._combine_generation_error(
+                    upstream_error,
+                    f"{type(exc).__name__}: {exc}",
+                )
+
+        return SpecialistResult(
+            enriched_context=fallback["enriched_context"],
+            resources=fallback_resources,
+            intervention_adjustments=fallback["intervention_adjustments"],
+            burnout_risk_flag=fallback_burnout,
+            escalation_recommendation=fallback_escalation,
+            generation_mode="fallback",
+            generation_error=self._combine_generation_error(upstream_error, result.error),
+        ).model_dump()
 
     def _invoke_remote_specialist(
         self,
@@ -138,71 +319,6 @@ class CareCoordinatorPipeline:
         raise RuntimeError(
             f"Remote specialist call failed for {specialist_agent.name}: {last_exc}"
         )
-
-    def _generate_local_accessibility_specialist(
-        self,
-        *,
-        persona_type: str,
-        findings: List[Dict[str, Any]],
-        risk: Dict[str, Any],
-        draft_plan: Dict[str, Any],
-        resources: List[str],
-    ) -> Dict[str, Any]:
-        prompt = build_json_prompt(
-            instruction=(
-                "You are the Accessibility Adaptation Specialist for CareMesh. "
-                "Return structured JSON only. Keep the plan simple, accessible, and low-friction "
-                "for older adults or accessibility-focused users."
-            ),
-            response_schema={
-                "enriched_context": "short interpretation",
-                "resources": ["resource title"],
-                "intervention_adjustments": ["specific change"],
-                "burnout_risk_flag": False,
-                "escalation_recommendation": "none | coordinator_review",
-            },
-            payload={
-                "persona_type": persona_type,
-                "findings": findings,
-                "risk": risk,
-                "draft_plan": draft_plan,
-                "resources": resources,
-            },
-        )
-        result = self._llm.generate_json(prompt)
-        if result.payload:
-            try:
-                return SpecialistResult(
-                    enriched_context=str(result.payload.get("enriched_context", "")).strip(),
-                    resources=sorted(set(resources + result.payload.get("resources", []))),
-                    intervention_adjustments=[
-                        str(item).strip()
-                        for item in result.payload.get("intervention_adjustments", [])
-                        if str(item).strip()
-                    ],
-                    burnout_risk_flag=result.payload.get("burnout_risk_flag"),
-                    escalation_recommendation=result.payload.get("escalation_recommendation"),
-                    generation_mode="llm",
-                    generation_error="",
-                ).model_dump()
-            except Exception as exc:
-                return SpecialistResult(
-                    enriched_context="Accessibility-focused adaptation kept the plan simple and easy to follow.",
-                    resources=resources,
-                    intervention_adjustments=["Keep plan simple and accessible."],
-                    escalation_recommendation="none",
-                    generation_mode="fallback",
-                    generation_error=f"{type(exc).__name__}: {exc}",
-                ).model_dump()
-
-        return SpecialistResult(
-            enriched_context="Accessibility-focused adaptation kept the plan simple and easy to follow.",
-            resources=resources,
-            intervention_adjustments=["Keep plan simple and accessible."],
-            escalation_recommendation="none",
-            generation_mode="fallback",
-            generation_error=result.error,
-        ).model_dump()
 
     @staticmethod
     def _merge_plan_patch(base: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
@@ -256,7 +372,7 @@ class CareCoordinatorPipeline:
         draft_plan = parallel_outputs["intervention_planning"]
 
         specialist_agent = self._specialist_for(persona_type)
-        specialist_result = self._run_specialist(
+        specialist_name, specialist_agent_type, specialist_result = self._run_specialist(
             persona_type=persona_type,
             findings=signal_result["findings"],
             risk=risk_result,
@@ -264,8 +380,8 @@ class CareCoordinatorPipeline:
             specialist_agent=specialist_agent,
         )
         recorder.log(
-            agent_name=specialist_agent.name if specialist_agent else "AccessibilityAdaptation",
-            agent_type=AgentType.a2a if specialist_agent else AgentType.local,
+            agent_name=specialist_name,
+            agent_type=specialist_agent_type,
             input_payload={"persona_type": persona_type, "risk_level": risk_result["risk_level"]},
             output_payload=specialist_result,
         )
