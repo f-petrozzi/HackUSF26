@@ -17,7 +17,7 @@ CareMesh monitors your health signals (sleep, stress, steps, mood) and runs a te
 ```
 apps/
   api/              ← FastAPI backend (Fab)
-  web/              ← Next.js frontend (Person 4)
+  web/              ← reserved for future consolidation
 services/
   agents/           ← Google ADK local agent pipeline (Person 2)
   tools/            ← ADK tool layer — HTTP wrappers for the API (Person 3)
@@ -35,7 +35,11 @@ docs/
     agents.md
     specialists.md
     frontend.md
+frontend/           ← current Vite + React frontend implementation
 ```
+
+Current note: the active frontend code lives in `frontend/`, and Clerk publishable keys should be injected through Doppler as `VITE_CLERK_PUBLISHABLE_KEY`.
+For live Clerk-backed API auth, the backend also needs `CLERK_JWT_KEY`, `CLERK_FRONTEND_API_URL`, and usually `CLERK_SECRET_KEY`.
 
 ---
 

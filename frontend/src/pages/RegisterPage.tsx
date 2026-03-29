@@ -1,14 +1,37 @@
+import { ClerkLoaded, ClerkLoading, SignUp } from "@clerk/clerk-react";
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { register } from "@/lib/api";
+import { appConfig } from "@/lib/config";
+import AuthShell from "@/components/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Heart, ArrowRight, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowRight, Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
+  if (appConfig.clerkPublishableKey) {
+    return (
+      <AuthShell
+        title="Create your account"
+        description="Start your personalized care journey"
+        footer={(
+          <p className="text-sm text-center text-muted-foreground mt-6">
+            Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>
+          </p>
+        )}
+      >
+        <ClerkLoading>
+          <div className="h-[560px] animate-pulse rounded-xl bg-secondary" />
+        </ClerkLoading>
+        <ClerkLoaded>
+          <SignUp path="/register" routing="path" signInUrl="/login" fallbackRedirectUrl="/onboarding" />
+        </ClerkLoaded>
+      </AuthShell>
+    );
+  }
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,15 +52,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6 bg-background">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-10">
-          <Heart className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold tracking-tight">CareMesh</span>
-        </div>
-        <h2 className="text-2xl font-bold mb-1">Create your account</h2>
-        <p className="text-muted-foreground mb-8">Start your personalized care journey</p>
-        <form onSubmit={handleSubmit} className="space-y-5">
+    <AuthShell
+      title="Create your account"
+      description="Start your personalized care journey"
+      footer={(
+        <p className="text-sm text-center text-muted-foreground mt-6">
+          Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>
+        </p>
+      )}
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label>Full name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Rivera" required />
@@ -55,11 +79,7 @@ export default function RegisterPage() {
             Create account
             {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
           </Button>
-        </form>
-        <p className="text-sm text-center text-muted-foreground mt-6">
-          Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>
-        </p>
-      </motion.div>
-    </div>
+      </form>
+    </AuthShell>
   );
 }
