@@ -4,12 +4,12 @@ from typing import Any, Dict, List
 
 try:
     from services.agents.adk_compat import LlmAgent
-    from services.agents.llm_utils import GeminiJsonClient, build_json_prompt
+    from services.agents.llm_utils import OpenAIJsonClient, build_json_prompt
     from services.agents.prompts import SIGNAL_INTERPRETATION_PROMPT
     from services.agents.schemas import SignalInterpretationResult
 except ImportError:
     from adk_compat import LlmAgent
-    from llm_utils import GeminiJsonClient, build_json_prompt
+    from llm_utils import OpenAIJsonClient, build_json_prompt
     from prompts import SIGNAL_INTERPRETATION_PROMPT
     from schemas import SignalInterpretationResult
 
@@ -20,7 +20,7 @@ class SignalInterpretationAgent:
             name="SignalInterpretation",
             instruction=SIGNAL_INTERPRETATION_PROMPT,
         )
-        self._llm = GeminiJsonClient()
+        self._llm = OpenAIJsonClient()
 
     def run(self, *, signals: Dict[str, Any]) -> Dict[str, Any]:
         llm_result = self._generate_with_llm(signals=signals)

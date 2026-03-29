@@ -64,16 +64,19 @@ export default function CoordinatorDashboard() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-sm">{c.user_name || `Member #${c.user_id}`}</span>
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="font-semibold text-sm">{c.member_label || `Member #${c.user_id}`}</span>
                     {c.persona ? (
                       <Badge variant="outline" className="text-xs capitalize">{c.persona.replace("_", " ")}</Badge>
                     ) : null}
                     <Badge variant="outline" className={`text-xs ${riskColors[c.risk_level]}`}>
-                      {c.risk_level}
+                      {c.risk_level} risk
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-1">{c.summary}</p>
+                  {c.member_email ? (
+                    <p className="text-xs text-muted-foreground mb-1">{c.member_email}</p>
+                  ) : null}
+                  <p className="text-sm text-muted-foreground line-clamp-2">{c.summary}</p>
                 </div>
                 <div className={`flex items-center gap-1.5 text-xs font-medium ${status.className}`}>
                   <status.icon className="h-3.5 w-3.5" />

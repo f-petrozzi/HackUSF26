@@ -18,6 +18,13 @@ class SimulateRequest(BaseModel):
     scenario: str  # stressed_student|exhausted_caregiver|older_adult
 
 
+class CheckInRequest(BaseModel):
+    mood: int           # 1-10
+    sleep_hours: float  # 0-12
+    stress: int         # 0-100 (frontend percentage scale; stored as 1-10 in signal)
+    note: str = ""
+
+
 class WearableEventOut(BaseModel):
     id: int
     user_id: int

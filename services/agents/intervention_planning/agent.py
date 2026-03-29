@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import Any, Dict, List, Optional
 
 try:
     from services.agents.adk_compat import LlmAgent
+    from services.agents.llm_utils import OpenAIJsonClient
     from services.agents.prompts import INTERVENTION_PLANNING_PROMPT
     from services.agents.schemas import (
         ActivitySuggestion,
@@ -15,6 +15,7 @@ try:
     )
 except ImportError:
     from adk_compat import LlmAgent
+    from llm_utils import OpenAIJsonClient
     from prompts import INTERVENTION_PLANNING_PROMPT
     from schemas import ActivitySuggestion, InterventionDraft, MealSuggestion, WellnessAction
 
@@ -25,7 +26,7 @@ class InterventionPlanningAgent:
             name="InterventionPlanning",
             instruction=INTERVENTION_PLANNING_PROMPT,
         )
-        self._model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self._llm = OpenAIJsonClient()
         self._last_generation_error = ""
 
     def run(
@@ -147,10 +148,6 @@ class InterventionPlanningAgent:
         signals: Dict[str, Any],
     ) -> Optional[Dict[str, object]]:
         self._last_generation_error = ""
-        api_key = os.getenv("GEMINI_API_KEY", "")
-        if not api_key:
-            self._last_generation_error = "GEMINI_API_KEY is not set."
-            return None
 
         try:
             prompt = self._build_prompt(
@@ -163,36 +160,15 @@ class InterventionPlanningAgent:
                 risk_level=risk_level,
                 signals=signals,
             )
-
-            try:
-                from google import genai
-
-                client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(
-                    model=self._model_name,
-                    contents=prompt,
-                )
-                payload = self._extract_json(getattr(response, "text", ""))
-                return self._coerce_plan(payload, resources=resources, persona_type=persona_type)
-            except Exception as genai_exc:
-                try:
-                    import google.generativeai as legacy_genai
-
-                    legacy_genai.configure(api_key=api_key)
-                    model = legacy_genai.GenerativeModel(self._model_name)
-                    response = model.generate_content(prompt)
-                    payload = self._extract_json(getattr(response, "text", ""))
-                    return self._coerce_plan(
-                        payload,
-                        resources=resources,
-                        persona_type=persona_type,
-                    )
-                except Exception as legacy_exc:
-                    self._last_generation_error = (
-                        f"google.genai: {type(genai_exc).__name__}: {genai_exc}; "
-                        f"google.generativeai: {type(legacy_exc).__name__}: {legacy_exc}"
-                    )
-                    return None
+            result = self._llm.generate_json(prompt)
+            if not result.payload:
+                self._last_generation_error = result.error
+                return None
+            return self._coerce_plan(
+                result.payload,
+                resources=resources,
+                persona_type=persona_type,
+            )
         except Exception as exc:
             self._last_generation_error = f"{type(exc).__name__}: {exc}"
             return None
@@ -248,19 +224,6 @@ class InterventionPlanningAgent:
                 'signals': signals,
             }, indent=2)}"
         )
-
-    @staticmethod
-    def _extract_json(text: str) -> Dict[str, Any]:
-        candidate = text.strip()
-        if candidate.startswith("```"):
-            lines = candidate.splitlines()
-            if len(lines) >= 3:
-                candidate = "\n".join(lines[1:-1]).strip()
-        start = candidate.find("{")
-        end = candidate.rfind("}")
-        if start == -1 or end == -1 or end <= start:
-            raise ValueError("No JSON object found in model response.")
-        return json.loads(candidate[start : end + 1])
 
     @staticmethod
     def _coerce_plan(

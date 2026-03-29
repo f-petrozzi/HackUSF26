@@ -29,7 +29,7 @@ class RecipeIn(BaseModel):
 
 class RecipeOut(BaseModel):
     id: int
-    user_id: int
+    user_id: Optional[int]
     title: str
     description: str
     source_url: str

@@ -7,6 +7,7 @@ GET  /api/runs         — list runs for current user
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import re
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
@@ -14,11 +15,12 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth import get_current_user
+from auth import get_current_user, is_admin
 from agent_runner import run_coordinator_for_run
 from database import get_db
-from models.agents import AgentMessage, AgentRun
-from models.user import User
+from models.agents import AgentMessage, AgentRun, Case, Intervention
+from models.events import NormalizedEvent
+from models.user import User, UserProfile
 from schemas.agents import AgentMessageOut, AgentRunOut, RunTraceOut, TriggerRunRequest
 
 
@@ -40,6 +42,62 @@ class AgentMessageCreate(BaseModel):
 router = APIRouter(prefix="/api/runs", tags=["runs"])
 
 
+def _member_label(email: str | None, user_id: int) -> str:
+    if not email:
+        return f"Member #{user_id}"
+
+    local_part = email.split("@")[0].strip()
+    cleaned = re.sub(r"[._+-]+", " ", local_part)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned.title() or f"Member #{user_id}"
+
+
+def _serialize_run(
+    run: AgentRun,
+    *,
+    member_email: str | None,
+    persona_type: str | None,
+    summary: str | None,
+) -> AgentRunOut:
+    return AgentRunOut.model_validate(
+        {
+            "id": run.id,
+            "user_id": run.user_id,
+            "normalized_event_id": run.normalized_event_id,
+            "status": run.status,
+            "started_at": run.started_at,
+            "completed_at": run.completed_at,
+            "risk_level": run.risk_level,
+            "member_label": _member_label(member_email, run.user_id),
+            "member_email": member_email,
+            "persona_type": persona_type,
+            "summary": summary.strip() if summary else None,
+        }
+    )
+
+
+def _serialize_case(
+    case: Case,
+    *,
+    member_email: str | None,
+    persona_type: str | None,
+    summary: str | None,
+):
+    return {
+        "id": case.id,
+        "user_id": case.user_id,
+        "run_id": case.run_id,
+        "risk_level": case.risk_level,
+        "status": case.status,
+        "created_at": case.created_at,
+        "updated_at": case.updated_at,
+        "member_label": _member_label(member_email, case.user_id),
+        "member_email": member_email,
+        "persona_type": persona_type,
+        "summary": summary.strip() if summary else f"{case.risk_level.title()} risk follow-up case.",
+    }
+
+
 @router.post("/trigger", response_model=AgentRunOut, status_code=201)
 async def trigger_run(
     body: TriggerRunRequest,
@@ -48,6 +106,23 @@ async def trigger_run(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if body.normalized_event_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail="normalized_event_id is required. Use POST /api/events/checkin for check-ins "
+                   "or POST /api/scenarios/{id}/run for seeded scenarios.",
+        )
+
+    # Validate the normalized event exists and belongs to this user
+    ne_result = await db.execute(
+        select(NormalizedEvent).where(
+            NormalizedEvent.id == body.normalized_event_id,
+            NormalizedEvent.user_id == user.id,
+        )
+    )
+    if not ne_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Normalized event not found")
+
     run = AgentRun(
         user_id=user.id,
         normalized_event_id=body.normalized_event_id,
@@ -72,10 +147,22 @@ async def list_runs(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(AgentRun).where(AgentRun.user_id == user.id).order_by(AgentRun.started_at.desc()).limit(50)
+    query = (
+        select(AgentRun, User.email, UserProfile.persona_type, NormalizedEvent.summary)
+        .join(User, User.id == AgentRun.user_id)
+        .outerjoin(UserProfile, UserProfile.user_id == AgentRun.user_id)
+        .outerjoin(NormalizedEvent, NormalizedEvent.id == AgentRun.normalized_event_id)
+        .order_by(AgentRun.started_at.desc())
+        .limit(50)
     )
-    return result.scalars().all()
+    if not is_admin(user):
+        query = query.where(AgentRun.user_id == user.id)
+
+    result = await db.execute(query)
+    return [
+        _serialize_run(run, member_email=email, persona_type=persona_type, summary=summary)
+        for run, email, persona_type, summary in result.all()
+    ]
 
 
 @router.put("/{run_id}", response_model=AgentRunOut)
@@ -129,13 +216,44 @@ async def get_run_trace(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(AgentRun).where(AgentRun.id == run_id, AgentRun.user_id == user.id))
-    run = result.scalar_one_or_none()
-    if not run:
+    run_query = (
+        select(AgentRun, User.email, UserProfile.persona_type, NormalizedEvent.summary)
+        .join(User, User.id == AgentRun.user_id)
+        .outerjoin(UserProfile, UserProfile.user_id == AgentRun.user_id)
+        .outerjoin(NormalizedEvent, NormalizedEvent.id == AgentRun.normalized_event_id)
+        .where(AgentRun.id == run_id)
+    )
+    if not is_admin(user):
+        run_query = run_query.where(AgentRun.user_id == user.id)
+
+    run_result = await db.execute(run_query)
+    row = run_result.one_or_none()
+    if not row:
         raise HTTPException(status_code=404, detail="Run not found")
+    run, member_email, persona_type, summary = row
 
     msgs_result = await db.execute(
         select(AgentMessage).where(AgentMessage.run_id == run_id).order_by(AgentMessage.created_at)
     )
     messages = msgs_result.scalars().all()
-    return RunTraceOut(run=run, messages=messages)
+
+    intervention_result = await db.execute(
+        select(Intervention).where(Intervention.run_id == run_id).order_by(Intervention.created_at.desc()).limit(1)
+    )
+    intervention = intervention_result.scalar_one_or_none()
+
+    case_result = await db.execute(
+        select(Case).where(Case.run_id == run_id).order_by(Case.created_at.desc()).limit(1)
+    )
+    case = case_result.scalar_one_or_none()
+
+    return RunTraceOut(
+        run=_serialize_run(run, member_email=member_email, persona_type=persona_type, summary=summary),
+        messages=messages,
+        intervention=intervention,
+        case=(
+            _serialize_case(case, member_email=member_email, persona_type=persona_type, summary=summary)
+            if case is not None
+            else None
+        ),
+    )

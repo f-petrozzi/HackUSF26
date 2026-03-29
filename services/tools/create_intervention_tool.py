@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from services.tools._client import api_request
 
@@ -13,6 +13,7 @@ def create_intervention(
     activity_suggestion: str,
     wellness_action: str,
     empathy_message: str,
+    meal_constraints: Optional[List[str]] = None,
     api_base_url: str,
     auth_header: str,
 ) -> Dict[str, Any]:
@@ -28,5 +29,6 @@ def create_intervention(
             "activity_suggestion": activity_suggestion,
             "wellness_action": wellness_action,
             "empathy_message": empathy_message,
+            "meal_constraints": meal_constraints or [],
         },
     )

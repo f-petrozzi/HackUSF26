@@ -24,13 +24,20 @@ export default function TracesListPage() {
             to={`/traces/${run.id}`}
             className="block p-4 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-sm">Run {run.id}</p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-semibold text-sm">
+                  {run.member_label || `Member #${run.user_id}`}
+                  {run.persona ? ` · ${run.persona.replace("_", " ")}` : ""}
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {run.risk_level ? `${run.risk_level} risk` : "Awaiting analysis"}
+                  Run {run.id}
+                  {run.risk_level ? ` · ${run.risk_level} risk` : " · Awaiting analysis"}
                   {run.scenario ? ` · ${run.scenario}` : ""}
                 </p>
+                {run.summary ? (
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{run.summary}</p>
+                ) : null}
               </div>
               <Badge variant="outline" className="capitalize">{run.status}</Badge>
             </div>

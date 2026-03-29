@@ -1,19 +1,14 @@
 from __future__ import annotations
 
-import json
-import os
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+import os
+from typing import Optional
 from urllib.parse import parse_qs, urlparse, urlunparse
+
+from settings import settings
 
 
 DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
-
-
-@dataclass
-class LlmResult:
-    payload: Optional[Dict[str, Any]]
-    error: str = ""
 
 
 @dataclass(frozen=True)
@@ -102,36 +97,38 @@ def _normalize_v1_base_url(candidate: str) -> str:
 
 def resolve_openai_config(model_name: Optional[str] = None) -> tuple[Optional[OpenAIConfig], str]:
     api_key = _first_non_empty(
-        os.getenv("AZURE_OPENAI_API_KEY", ""),
-        os.getenv("OPENAI_API_KEY", ""),
-        os.getenv("AZURE_API_KEY", ""),
+        settings.azure_openai_api_key,
+        settings.openai_api_key,
+        settings.azure_api_key,
     )
     if not api_key:
         return None, "AZURE_OPENAI_API_KEY or OPENAI_API_KEY is not set."
 
     base_url_candidate = _first_non_empty(
-        os.getenv("OPENAI_BASE_URL", ""),
-        os.getenv("AZURE_OPENAI_BASE_URL", ""),
+        settings.openai_base_url,
+        settings.azure_openai_base_url,
     )
-    endpoint_candidate = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip()
+    endpoint_candidate = settings.azure_openai_endpoint.strip()
 
     parsed_base_url = _parse_endpoint(base_url_candidate)
     parsed_endpoint = _parse_endpoint(endpoint_candidate)
 
     resolved_model = model_name or _first_non_empty(
-        os.getenv("AZURE_OPENAI_DEPLOYMENT", ""),
-        os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", ""),
+        settings.azure_openai_deployment,
+        settings.azure_openai_deployment_name,
         parsed_base_url.deployment,
         parsed_endpoint.deployment,
-        os.getenv("AZURE_OPENAI_MODEL", ""),
-        os.getenv("OPENAI_MODEL", ""),
+        settings.azure_openai_model,
+        settings.openai_model,
         DEFAULT_OPENAI_MODEL,
     )
 
     use_azure_client = bool(
-        endpoint_candidate and not parsed_endpoint.has_v1_path
+        endpoint_candidate
+        and not parsed_endpoint.has_v1_path
     ) or (
-        base_url_candidate and (parsed_base_url.has_legacy_azure_path or parsed_base_url.api_version)
+        base_url_candidate
+        and (parsed_base_url.has_legacy_azure_path or parsed_base_url.api_version)
     )
 
     if use_azure_client:
@@ -140,8 +137,10 @@ def resolve_openai_config(model_name: Optional[str] = None) -> tuple[Optional[Op
             return None, "AZURE_OPENAI_ENDPOINT or OPENAI_BASE_URL is not set."
 
         api_version = _first_non_empty(
-            os.getenv("AZURE_OPENAI_API_VERSION", ""),
-            os.getenv("OPENAI_API_VERSION", ""),
+            settings.azure_openai_api_version,
+            settings.openai_api_version,
+            os.environ.get("AZURE_OPENAI_API_VERSION", ""),
+            os.environ.get("OPENAI_API_VERSION", ""),
             parsed_endpoint.api_version,
             parsed_base_url.api_version,
         )
@@ -167,82 +166,55 @@ def resolve_openai_config(model_name: Optional[str] = None) -> tuple[Optional[Op
     ), ""
 
 
-class OpenAIJsonClient:
-    def __init__(self, model_name: Optional[str] = None) -> None:
-        self.model_name = model_name
-
-    def generate_json(self, prompt: str) -> LlmResult:
-        config, error = resolve_openai_config(self.model_name)
-        if not config:
-            return LlmResult(payload=None, error=error)
-
-        try:
-            from openai import AzureOpenAI, OpenAI
-
-            if config.use_azure_client:
-                client = AzureOpenAI(
-                    api_key=config.api_key,
-                    azure_endpoint=config.azure_endpoint,
-                    api_version=config.api_version,
-                )
-            else:
-                client = OpenAI(
-                    api_key=config.api_key,
-                    base_url=config.base_url,
-                )
-            response = client.chat.completions.create(
-                model=config.model,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return LlmResult(payload=self._extract_json(self._extract_text(response)))
-        except Exception as exc:
-            return LlmResult(
-                payload=None,
-                error=f"openai: {type(exc).__name__}: {exc}",
-            )
-
-    @staticmethod
-    def _extract_json(text: str) -> Dict[str, Any]:
-        candidate = text.strip()
-        if candidate.startswith("```"):
-            lines = candidate.splitlines()
-            if len(lines) >= 3:
-                candidate = "\n".join(lines[1:-1]).strip()
-        start = candidate.find("{")
-        end = candidate.rfind("}")
-        if start == -1 or end == -1 or end <= start:
-            raise ValueError("No JSON object found in model response.")
-        return json.loads(candidate[start : end + 1])
-
-    @staticmethod
-    def _extract_text(response: Any) -> str:
-        content = response.choices[0].message.content
-        if isinstance(content, str):
-            return content
-        if isinstance(content, list):
-            parts: list[str] = []
-            for item in content:
-                text = getattr(item, "text", "")
-                if text:
-                    parts.append(str(text))
-                    continue
-                if isinstance(item, dict) and item.get("type") == "text":
-                    value = item.get("text", "")
-                    if isinstance(value, dict):
-                        value = value.get("value", "")
-                    if value:
-                        parts.append(str(value))
-            return "\n".join(parts)
-        raise ValueError("No text content found in model response.")
+def extract_response_text(response) -> str:
+    content = response.choices[0].message.content
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            text = getattr(item, "text", "")
+            if text:
+                parts.append(str(text))
+                continue
+            if isinstance(item, dict) and item.get("type") == "text":
+                value = item.get("text", "")
+                if isinstance(value, dict):
+                    value = value.get("value", "")
+                if value:
+                    parts.append(str(value))
+        return "\n".join(parts)
+    raise ValueError("No text content found in model response.")
 
 
-GeminiJsonClient = OpenAIJsonClient
+async def generate_text(prompt: str, *, model_name: Optional[str] = None) -> str:
+    config, error = resolve_openai_config(model_name=model_name)
+    if not config:
+        raise RuntimeError(error)
 
+    try:
+        from openai import AsyncAzureOpenAI, AsyncOpenAI
+    except ModuleNotFoundError as exc:
+        if exc.name != "openai":
+            raise
+        raise RuntimeError(
+            "The 'openai' package is not installed. Install API dependencies with "
+            "`pip install -r apps/api/requirements.txt`."
+        ) from exc
 
-def build_json_prompt(*, instruction: str, response_schema: Dict[str, Any], payload: Dict[str, Any]) -> str:
-    return (
-        f"{instruction}\n\n"
-        "Return only valid JSON with no markdown fences.\n"
-        f"Response schema:\n{json.dumps(response_schema, indent=2)}\n\n"
-        f"Input:\n{json.dumps(payload, indent=2)}"
+    if config.use_azure_client:
+        client = AsyncAzureOpenAI(
+            api_key=config.api_key,
+            azure_endpoint=config.azure_endpoint,
+            api_version=config.api_version,
+        )
+    else:
+        client = AsyncOpenAI(
+            api_key=config.api_key,
+            base_url=config.base_url,
+        )
+    response = await client.chat.completions.create(
+        model=config.model,
+        messages=[{"role": "user", "content": prompt}],
     )
+    return extract_response_text(response)

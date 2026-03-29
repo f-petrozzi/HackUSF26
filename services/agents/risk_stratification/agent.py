@@ -4,12 +4,12 @@ from typing import Any, Dict, List, Optional
 
 try:
     from services.agents.adk_compat import LlmAgent
-    from services.agents.llm_utils import GeminiJsonClient, build_json_prompt
+    from services.agents.llm_utils import OpenAIJsonClient, build_json_prompt
     from services.agents.prompts import RISK_STRATIFICATION_PROMPT
     from services.agents.schemas import RiskAssessment
 except ImportError:
     from adk_compat import LlmAgent
-    from llm_utils import GeminiJsonClient, build_json_prompt
+    from llm_utils import OpenAIJsonClient, build_json_prompt
     from prompts import RISK_STRATIFICATION_PROMPT
     from schemas import RiskAssessment
 
@@ -20,7 +20,7 @@ class RiskStratificationAgent:
             name="RiskStratification",
             instruction=RISK_STRATIFICATION_PROMPT,
         )
-        self._llm = GeminiJsonClient()
+        self._llm = OpenAIJsonClient()
 
     def run(
         self,

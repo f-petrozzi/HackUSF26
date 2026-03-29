@@ -31,6 +31,7 @@ from models.health import (
     HealthSyncRun,
 )
 from models.user import User
+from openai_client import generate_text
 from schemas.health import (
     ActivityOut,
     CalorieEstimateOut,
@@ -265,7 +266,7 @@ async def manual_sync(user: User = Depends(get_current_user)):
 
 @router.get("/calorie-log", response_model=List[CalorieLogOut])
 async def list_calorie_log(
-    log_date: Optional[str] = Query(None, description="YYYY-MM-DD filter"),
+    log_date: Optional[date] = Query(None, description="YYYY-MM-DD filter"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -319,20 +320,14 @@ async def ai_calorie_estimate(
     body: CalorieEstimateRequest,
     user: User = Depends(get_current_user),
 ):
-    """Use Gemini to estimate calories for a food item."""
+    """Use Azure OpenAI to estimate calories for a food item."""
     try:
-        import google.generativeai as genai
-        from settings import settings as s
-
-        genai.configure(api_key=s.gemini_api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
         prompt = (
             f"Estimate the calories in: {body.food_name}, quantity: {body.quantity}. "
             "Reply with only a JSON object: {\"calories\": <integer>, \"confidence\": \"high|medium|low\"}"
         )
-        response = await model.generate_content_async(prompt)
         import json, re
-        text = response.text
+        text = await generate_text(prompt)
         m = re.search(r'\{[^}]+\}', text)
         if m:
             data = json.loads(m.group())

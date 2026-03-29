@@ -28,6 +28,18 @@ services:
       CAREMESH_REPO_ROOT: /workspace
       STUDENT_SPECIALIST_URL: http://specialist-student:8001
       CAREGIVER_SPECIALIST_URL: http://specialist-caregiver:8002
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_API_KEY: ${AZURE_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_BASE_URL: ${AZURE_OPENAI_BASE_URL:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-}
+      OPENAI_API_VERSION: ${OPENAI_API_VERSION:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_DEPLOYMENT_NAME: ${AZURE_OPENAI_DEPLOYMENT_NAME:-}
+      AZURE_OPENAI_MODEL: ${AZURE_OPENAI_MODEL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
     volumes:
       - ./apps/api:/app
       - ./:/workspace
@@ -42,26 +54,46 @@ services:
     working_dir: /workspace
     environment:
       CAREMESH_REPO_ROOT: /workspace
-    env_file:
-      - apps/api/.env
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_API_KEY: ${AZURE_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_BASE_URL: ${AZURE_OPENAI_BASE_URL:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-}
+      OPENAI_API_VERSION: ${OPENAI_API_VERSION:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_DEPLOYMENT_NAME: ${AZURE_OPENAI_DEPLOYMENT_NAME:-}
+      AZURE_OPENAI_MODEL: ${AZURE_OPENAI_MODEL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
     ports:
       - "8001:8001"
     volumes:
       - ./:/workspace
-    command: sh -c "pip install --no-cache-dir fastapi uvicorn httpx google-generativeai && uvicorn services.remote_specialists.student_support.app:app --host 0.0.0.0 --port 8001 --reload"
+    command: sh -c "pip install --no-cache-dir -r services/remote_specialists/requirements.txt && uvicorn services.remote_specialists.student_support.app:app --host 0.0.0.0 --port 8001 --reload"
 
   specialist-caregiver:
     image: python:3.11-slim
     working_dir: /workspace
     environment:
       CAREMESH_REPO_ROOT: /workspace
-    env_file:
-      - apps/api/.env
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_API_KEY: ${AZURE_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_BASE_URL: ${AZURE_OPENAI_BASE_URL:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-}
+      OPENAI_API_VERSION: ${OPENAI_API_VERSION:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_DEPLOYMENT_NAME: ${AZURE_OPENAI_DEPLOYMENT_NAME:-}
+      AZURE_OPENAI_MODEL: ${AZURE_OPENAI_MODEL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
     ports:
       - "8002:8002"
     volumes:
       - ./:/workspace
-    command: sh -c "pip install --no-cache-dir fastapi uvicorn httpx google-generativeai && uvicorn services.remote_specialists.caregiver_burnout.app:app --host 0.0.0.0 --port 8002 --reload"
+    command: sh -c "pip install --no-cache-dir -r services/remote_specialists/requirements.txt && uvicorn services.remote_specialists.caregiver_burnout.app:app --host 0.0.0.0 --port 8002 --reload"
 
   web:
     build:

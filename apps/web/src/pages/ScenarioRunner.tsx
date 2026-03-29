@@ -1,21 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getScenarios, triggerScenario } from "@/lib/api";
+import { getAgentRun, getScenarios, triggerScenario } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FlaskConical, Play, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import type { AgentRun } from "@/lib/types";
 
 export default function ScenarioRunner() {
   const [selected, setSelected] = useState<string | null>(null);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { data: scenarios } = useQuery({ queryKey: ["scenarios"], queryFn: getScenarios });
 
   const trigger = useMutation({
     mutationFn: triggerScenario,
-    onSuccess: (run) => navigate(`/traces/${run.id}`),
+    onSuccess: (run) => setActiveRunId(run.id),
   });
+
+  const liveRun = useQuery({
+    queryKey: ["scenario-run", activeRunId],
+    queryFn: () => getAgentRun(activeRunId!),
+    enabled: !!activeRunId,
+    refetchInterval: (query) => {
+      const run = query.state.data as AgentRun | undefined;
+      if (!activeRunId) return false;
+      if (!run) return 2000;
+      return run.status === "pending" || run.status === "running" ? 2000 : false;
+    },
+  });
+
+  useEffect(() => {
+    if (!activeRunId || !liveRun.data) return;
+    if (liveRun.data.status === "completed" || liveRun.data.status === "failed") {
+      navigate(`/traces/${activeRunId}`);
+    }
+  }, [activeRunId, liveRun.data, navigate]);
+
+  const awaitingCompletion =
+    !!activeRunId && (!liveRun.data || liveRun.data.status === "pending" || liveRun.data.status === "running");
 
   return (
     <div className="p-6 lg:p-10 max-w-3xl mx-auto space-y-8">
@@ -48,14 +72,36 @@ export default function ScenarioRunner() {
         ))}
       </div>
 
+      {activeRunId ? (
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Live run status</p>
+              <p className="text-xs text-muted-foreground">
+                Run <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{activeRunId}</code>
+                {liveRun.data?.summary ? ` · ${liveRun.data.summary}` : ""}
+              </p>
+            </div>
+            <Badge variant="outline" className="capitalize">
+              {liveRun.data?.status || "pending"}
+            </Badge>
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {awaitingCompletion
+              ? "Polling every 2 seconds until the run reaches a terminal state, then opening the final trace."
+              : "Terminal state reached. Opening trace…"}
+          </p>
+        </div>
+      ) : null}
+
       <Button
         onClick={() => selected && trigger.mutate(selected)}
-        disabled={!selected || trigger.isPending}
+        disabled={!selected || trigger.isPending || awaitingCompletion}
         className="w-full"
         size="lg"
       >
-        {trigger.isPending ? (
-          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Running agents…</>
+        {trigger.isPending || awaitingCompletion ? (
+          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Waiting for final trace…</>
         ) : (
           <><Play className="h-4 w-4 mr-2" />Run scenario</>
         )}

@@ -1,6 +1,7 @@
 """
 Event ingestion and wearable simulator.
-POST /api/events/ingest — accepts a single signal event
+POST /api/events/ingest   — accepts a single signal event (raw; no normalization)
+POST /api/events/checkin  — atomic: ingest check-in bundle + normalize + create run
 POST /api/events/simulate — generates a realistic bundle for a named scenario
 """
 from __future__ import annotations
@@ -9,15 +10,18 @@ import random
 from datetime import datetime, timezone
 from typing import Any, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_runner import run_coordinator_for_run
 from auth import get_current_user
 from database import get_db
+from models.agents import AgentRun
 from models.events import BehaviorEvent, NormalizedEvent, WearableEvent
 from models.user import User
-from schemas.events import IngestEventRequest, NormalizedEventOut, SimulateRequest, WearableEventOut
+from schemas.agents import AgentRunOut
+from schemas.events import CheckInRequest, IngestEventRequest, NormalizedEventOut, SimulateRequest, WearableEventOut
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -101,6 +105,73 @@ async def ingest_event(
     await db.commit()
     await db.refresh(event)
     return event
+
+
+@router.post("/checkin", response_model=AgentRunOut, status_code=201)
+async def checkin(
+    body: CheckInRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Atomic check-in: create raw wearable events, normalize them into a bundle,
+    create an agent run linked to that bundle, and enqueue the coordinator.
+    Returns the AgentRun so the frontend can navigate directly to the trace.
+    """
+    now = datetime.now(timezone.utc)
+    signals: dict[str, Any] = {}
+
+    # Convert frontend stress (0-100) to 1-10 scale
+    stress_1_10 = max(1, min(10, round(body.stress / 10))) or 1
+
+    raw_events = [
+        {"signal_type": "check_in_mood", "value": str(body.mood), "unit": "1-10"},
+        {"signal_type": "sleep_hours", "value": str(body.sleep_hours), "unit": "hours"},
+        {"signal_type": "stress_level", "value": str(stress_1_10), "unit": "1-10"},
+    ]
+    if body.note.strip():
+        raw_events.append({"signal_type": "check_in_note", "value": body.note.strip(), "unit": ""})
+
+    for sig in raw_events:
+        event = WearableEvent(
+            user_id=user.id,
+            source="manual",
+            signal_type=sig["signal_type"],
+            value=sig["value"],
+            unit=sig["unit"],
+            recorded_at=now,
+        )
+        db.add(event)
+        signals[sig["signal_type"]] = sig["value"]
+
+    norm = NormalizedEvent(
+        user_id=user.id,
+        signals=signals,
+        summary=_build_summary(signals),
+    )
+    db.add(norm)
+    await db.flush()
+
+    run = AgentRun(
+        user_id=user.id,
+        normalized_event_id=norm.id,
+        status="pending",
+    )
+    db.add(run)
+    await db.commit()
+    await db.refresh(run)
+
+    background_tasks.add_task(
+        run_coordinator_for_run,
+        user_id=user.id,
+        run_id=run.id,
+        auth_header=request.headers.get("authorization", ""),
+        api_base_url=str(request.base_url).rstrip("/"),
+        scenario="live",
+    )
+    return run
 
 
 @router.post("/simulate", response_model=NormalizedEventOut, status_code=201)

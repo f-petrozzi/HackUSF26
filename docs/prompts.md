@@ -397,7 +397,7 @@ You are the integration engineer for CareMesh. The four backend/frontend/agent c
 
 Tasks:
 1. docker-compose.yml — define services: api (FastAPI on 8000), web (Next.js on 3000), db (PostgreSQL), specialist-student (ADK A2A on 8001), specialist-caregiver (ADK A2A on 8002). Add healthchecks. Set environment variables from .env.
-2. .env.example — document all required variables: DATABASE_URL, GEMINI_API_KEY, JWT_SECRET, API_BASE_URL, STUDENT_SPECIALIST_URL, CAREGIVER_SPECIALIST_URL
+2. .env.example — document all required variables: DATABASE_URL, AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT, JWT_SECRET, API_BASE_URL, STUDENT_SPECIALIST_URL, CAREGIVER_SPECIALIST_URL
 3. Run infra/seed/seed.py against the database. Verify seed data is correct.
 4. Run Alembic migrations. Fix any schema issues.
 5. Trigger Scenario 1 (Stressed Student) via POST /api/scenarios/stressed_student/run. Assert: agent_run created, agent_messages include parallel branch records and A2A call, intervention created, case created.

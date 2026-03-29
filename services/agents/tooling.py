@@ -40,7 +40,11 @@ class ToolProvider:
         if not self.use_stubs:
             func = _load_callable("services.tools.get_user_profile_tool", "get_user_profile")
             if func:
-                return func(api_base_url=self.api_base_url, auth_header=self.auth_header)
+                return func(
+                    api_base_url=self.api_base_url,
+                    auth_header=self.auth_header,
+                    fallback_persona=persona_type,
+                )
         return get_user_profile_stub(persona_type=persona_type)
 
     def get_recent_signals(self, scenario: str = "stressed_student") -> List[Dict[str, Any]]:

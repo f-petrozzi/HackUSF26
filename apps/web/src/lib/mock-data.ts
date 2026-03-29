@@ -48,10 +48,10 @@ export const mockSupportPlan: SupportPlan = {
 };
 
 export const mockCases: Case[] = [
-  { id: "c1", user_id: "u1", user_name: "Alex Rivera", persona: "student", risk_level: "moderate", status: "open", summary: "Elevated stress + sleep deficit pattern over 3 days", created_at: "2026-03-28T10:30:00Z", updated_at: "2026-03-28T10:30:00Z" },
-  { id: "c2", user_id: "u2", user_name: "Maria Santos", persona: "caregiver", risk_level: "high", status: "in_progress", summary: "Caregiver burnout indicators — declining self-care metrics", created_at: "2026-03-27T14:00:00Z", updated_at: "2026-03-28T09:00:00Z" },
-  { id: "c3", user_id: "u4", user_name: "James Whitfield", persona: "older_adult", risk_level: "low", status: "closed", summary: "Routine check-in — all vitals within normal range", created_at: "2026-03-26T08:00:00Z", updated_at: "2026-03-27T16:00:00Z" },
-  { id: "c4", user_id: "u5", user_name: "Priya Kapoor", persona: "student", risk_level: "critical", status: "open", summary: "Severe sleep deprivation + academic crisis indicators", created_at: "2026-03-28T06:00:00Z", updated_at: "2026-03-28T11:00:00Z" },
+  { id: "c1", user_id: "u1", run_id: "r1", member_label: "Alex Rivera", member_email: "student@caremesh.demo", persona: "student", risk_level: "moderate", status: "open", summary: "Elevated stress + sleep deficit pattern over 3 days", created_at: "2026-03-28T10:30:00Z", updated_at: "2026-03-28T10:30:00Z" },
+  { id: "c2", user_id: "u2", member_label: "Maria Santos", member_email: "caregiver@caremesh.demo", persona: "caregiver", risk_level: "high", status: "in_progress", summary: "Caregiver burnout indicators — declining self-care metrics", created_at: "2026-03-27T14:00:00Z", updated_at: "2026-03-28T09:00:00Z" },
+  { id: "c3", user_id: "u4", member_label: "James Whitfield", member_email: "older_adult@caremesh.demo", persona: "older_adult", risk_level: "low", status: "closed", summary: "Routine check-in — all vitals within normal range", created_at: "2026-03-26T08:00:00Z", updated_at: "2026-03-27T16:00:00Z" },
+  { id: "c4", user_id: "u5", member_label: "Priya Kapoor", member_email: "student2@caremesh.demo", persona: "student", risk_level: "critical", status: "open", summary: "Severe sleep deprivation + academic crisis indicators", created_at: "2026-03-28T06:00:00Z", updated_at: "2026-03-28T11:00:00Z" },
 ];
 
 const traceMessages: AgentMessage[] = [
@@ -74,6 +74,17 @@ export const mockAgentRun: AgentRun = {
   started_at: "2026-03-28T10:30:00Z",
   completed_at: "2026-03-28T10:30:08Z",
   risk_level: "moderate",
+  member_label: "Alex Rivera",
+  member_email: "student@caremesh.demo",
+  persona: "student",
+  summary: "sleep 5.2h; stress 7.2/10; mood: low",
+  final_action: {
+    meal_suggestion: "Focus on magnesium-rich foods and a simple lunch you can actually fit between classes.",
+    activity_suggestion: "Take a 15-minute outdoor walk between classes to break the stress cycle.",
+    wellness_action: "Set a phone-down alarm tonight and protect one earlier bedtime window.",
+    empathy_message: "Hey Alex, I can see this week has been heavy. Start with one small reset and let the rest be enough for today.",
+  },
+  case: mockCases[0],
   messages: traceMessages,
 };
 

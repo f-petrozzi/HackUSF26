@@ -23,6 +23,7 @@ from database import get_db
 from models.agents import Intervention
 from models.recipes import MealPlanSlot, Recipe
 from models.user import User
+from openai_client import generate_text
 from schemas.recipes import (
     MealPlanSlotIn,
     MealPlanSlotOut,
@@ -66,6 +67,120 @@ _MAX_HTML_BYTES = 15 * 1024 * 1024
 _MAX_REDIRECTS = 5
 
 VALID_CATEGORIES = {"Produce", "Meat", "Dairy", "Pantry", "Frozen", "Bakery", "Beverages", "Other"}
+
+DEFAULT_TEMPLATE_RECIPES = [
+    {
+        "title": "Spinach Yogurt Bowl",
+        "description": "A quick, high-protein bowl with magnesium-rich greens and almost no prep.",
+        "tags": ["high_protein", "low_prep", "comforting", "hydration_support"],
+        "prep_minutes": 8,
+        "cook_minutes": 0,
+        "servings": 1,
+        "ingredients": [
+            {"name": "Greek yogurt", "quantity": "1 cup", "category": "Dairy", "section": "Base"},
+            {"name": "Baby spinach", "quantity": "1 cup", "category": "Produce", "section": "Base"},
+            {"name": "Walnuts", "quantity": "2 tbsp", "category": "Pantry", "section": "Toppings"},
+            {"name": "Blueberries", "quantity": "1/2 cup", "category": "Produce", "section": "Toppings"},
+        ],
+        "instructions": "Blend spinach into yogurt until smooth.\nTop with walnuts and blueberries.\nServe cold.",
+    },
+    {
+        "title": "Comforting Lentil Rice Cup",
+        "description": "A warm, gentle meal built for high-stress days when energy is low.",
+        "tags": ["comforting", "low_prep", "light", "vegetarian"],
+        "prep_minutes": 5,
+        "cook_minutes": 12,
+        "servings": 1,
+        "ingredients": [
+            {"name": "Microwave rice", "quantity": "1 cup", "category": "Pantry", "section": "Main"},
+            {"name": "Cooked lentils", "quantity": "3/4 cup", "category": "Pantry", "section": "Main"},
+            {"name": "Olive oil", "quantity": "1 tbsp", "category": "Pantry", "section": "Finish"},
+            {"name": "Salt", "quantity": "1 pinch", "category": "Pantry", "section": "Finish"},
+        ],
+        "instructions": "Warm the rice and lentils.\nCombine in a bowl with olive oil and salt.\nEat as a low-effort recovery meal.",
+    },
+    {
+        "title": "Hydration Citrus Oats",
+        "description": "Soft oats with fruit and chia for recovery after poor sleep or elevated stress.",
+        "tags": ["hydration_support", "high_protein", "light", "breakfast"],
+        "prep_minutes": 5,
+        "cook_minutes": 10,
+        "servings": 1,
+        "ingredients": [
+            {"name": "Rolled oats", "quantity": "1/2 cup", "category": "Pantry", "section": "Oats"},
+            {"name": "Milk or soy milk", "quantity": "1 cup", "category": "Dairy", "section": "Oats"},
+            {"name": "Orange slices", "quantity": "1/2 cup", "category": "Produce", "section": "Toppings"},
+            {"name": "Chia seeds", "quantity": "1 tbsp", "category": "Pantry", "section": "Toppings"},
+        ],
+        "instructions": "Cook oats in milk until soft.\nTop with orange slices and chia seeds.\nServe warm.",
+    },
+    {
+        "title": "Dairy-Free Recovery Smoothie",
+        "description": "A fast dairy-free option for low-energy days with basic protein and hydration support.",
+        "tags": ["low_prep", "hydration_support", "high_protein", "avoid_dairy"],
+        "prep_minutes": 5,
+        "cook_minutes": 0,
+        "servings": 1,
+        "ingredients": [
+            {"name": "Soy milk", "quantity": "1 cup", "category": "Beverages", "section": "Smoothie"},
+            {"name": "Banana", "quantity": "1", "category": "Produce", "section": "Smoothie"},
+            {"name": "Frozen berries", "quantity": "1/2 cup", "category": "Frozen", "section": "Smoothie"},
+            {"name": "Protein powder", "quantity": "1 scoop", "category": "Pantry", "section": "Smoothie"},
+        ],
+        "instructions": "Blend all ingredients until smooth.\nDrink immediately.",
+    },
+    {
+        "title": "Nut-Free Chickpea Toast",
+        "description": "A simple savory option with protein that works well for stress-support lunch.",
+        "tags": ["high_protein", "low_prep", "avoid_nuts", "light"],
+        "prep_minutes": 10,
+        "cook_minutes": 5,
+        "servings": 1,
+        "ingredients": [
+            {"name": "Bread", "quantity": "2 slices", "category": "Bakery", "section": "Toast"},
+            {"name": "Chickpeas", "quantity": "1/2 cup", "category": "Pantry", "section": "Topping"},
+            {"name": "Olive oil", "quantity": "1 tsp", "category": "Pantry", "section": "Topping"},
+            {"name": "Lemon juice", "quantity": "1 tsp", "category": "Produce", "section": "Topping"},
+        ],
+        "instructions": "Toast the bread.\nMash chickpeas with olive oil and lemon juice.\nSpread on toast and serve.",
+    },
+]
+
+
+def _template_recipe_scope(user_id: int):
+    return or_(Recipe.user_id == user_id, Recipe.user_id.is_(None))
+
+
+async def _ensure_template_recipes(db: AsyncSession, *, user_id: int) -> None:
+    existing = (
+        await db.execute(
+            select(Recipe)
+            .where(Recipe.is_template.is_(True), _template_recipe_scope(user_id))
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return
+
+    for template in DEFAULT_TEMPLATE_RECIPES:
+        db.add(
+            Recipe(
+                user_id=user_id,
+                is_template=True,
+                title=template["title"],
+                description=template["description"],
+                source_url="",
+                our_way_notes="",
+                prep_minutes=template["prep_minutes"],
+                cook_minutes=template["cook_minutes"],
+                servings=template["servings"],
+                tags=template["tags"],
+                ingredients=template["ingredients"],
+                instructions=template["instructions"],
+                photo_filename="",
+            )
+        )
+    await db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -456,7 +571,7 @@ async def parse_url(
 
 
 # ---------------------------------------------------------------------------
-# Text parsing endpoint (Gemini)
+# Text parsing endpoint (Azure OpenAI)
 # ---------------------------------------------------------------------------
 
 @router.post("/parse-text", response_model=ParsedRecipe)
@@ -468,12 +583,6 @@ async def parse_text(
         raise HTTPException(400, "text is empty")
 
     try:
-        import google.generativeai as genai
-        from settings import settings as s
-
-        genai.configure(api_key=s.gemini_api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
-
         prompt = (
             'Extract the recipe below into a JSON object with exactly these keys:\n'
             'title, description, prep_minutes, cook_minutes, servings,\n'
@@ -495,17 +604,16 @@ async def parse_text(
             + body.text
         )
 
-        response = await model.generate_content_async(prompt)
-        text = response.text.strip()
+        text = (await generate_text(prompt)).strip()
 
         # Extract JSON from response
         m = re.search(r'\{[\s\S]*\}', text)
         if not m:
-            raise ValueError("No JSON found in Gemini response")
+            raise ValueError("No JSON found in Azure OpenAI response")
         data = json.loads(m.group())
 
     except Exception as exc:
-        logger.error("Gemini recipe parse failed: %s", exc)
+        logger.error("Azure OpenAI recipe parse failed: %s", exc)
         raise HTTPException(502, f"AI parsing failed: {exc}")
 
     # Normalize ingredients
@@ -602,6 +710,8 @@ async def recommended_recipes(
     most recent intervention. Falls back to top template recipes if none exists.
     """
     # 1. Get latest intervention's meal_constraints
+    await _ensure_template_recipes(db, user_id=user.id)
+
     intervention_result = await db.execute(
         select(Intervention)
         .where(Intervention.user_id == user.id)
@@ -612,7 +722,10 @@ async def recommended_recipes(
     constraints: list[str] = (intervention.meal_constraints or []) if intervention else []
 
     # 2. Query template recipes
-    base_query = select(Recipe).where(Recipe.is_template.is_(True))
+    base_query = select(Recipe).where(
+        Recipe.is_template.is_(True),
+        _template_recipe_scope(user.id),
+    )
 
     if constraints:
         # Score by number of overlapping tags — fetch templates and filter in Python
@@ -636,7 +749,15 @@ async def get_recipe(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id, Recipe.user_id == user.id))
+    result = await db.execute(
+        select(Recipe).where(
+            Recipe.id == recipe_id,
+            or_(
+                Recipe.user_id == user.id,
+                (Recipe.is_template.is_(True) & Recipe.user_id.is_(None)),
+            ),
+        )
+    )
     recipe = result.scalar_one_or_none()
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")

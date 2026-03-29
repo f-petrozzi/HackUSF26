@@ -32,13 +32,14 @@ pip install google-adk
 Create `services/agents/.env`:
 
 ```
-GEMINI_API_KEY=your-gemini-key           # required for all LlmAgents
+AZURE_OPENAI_API_KEY=your-azure-openai-key
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com
+AZURE_OPENAI_DEPLOYMENT=gpt-4.1-mini     # deployment name used by the coordinator pipeline
 API_BASE_URL=http://localhost:8000       # gets set by Fab once backend is running
 STUDENT_SPECIALIST_URL=http://localhost:8001   # Person 3's A2A server
 CAREGIVER_SPECIALIST_URL=http://localhost:8002  # Person 3's A2A server
 ```
 
-Get `GEMINI_API_KEY` from Google AI Studio (free tier works for hackathon).
 Get `API_BASE_URL` from Fab once the backend is running.
 
 ---

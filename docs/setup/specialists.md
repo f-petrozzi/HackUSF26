@@ -33,11 +33,12 @@ pip install google-adk httpx
 Create `services/tools/.env` and `services/remote_specialists/.env`:
 
 ```
-GEMINI_API_KEY=your-gemini-key           # required for specialist LlmAgents
+AZURE_OPENAI_API_KEY=your-azure-openai-key
+AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com
+AZURE_OPENAI_DEPLOYMENT=gpt-4.1-mini     # deployment name used by the specialist services
 API_BASE_URL=http://localhost:8000       # Fab's backend — needed for all tools
 ```
 
-Get `GEMINI_API_KEY` from Google AI Studio.
 Get `API_BASE_URL` from Fab once the backend is running.
 
 ---

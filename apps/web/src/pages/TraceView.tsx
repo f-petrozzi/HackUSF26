@@ -1,11 +1,20 @@
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router-dom";
-import { getAgentRun } from "@/lib/api";
 import { motion } from "framer-motion";
-import { Network, Globe2, RotateCcw, Bot, ArrowLeft, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Bot,
+  CheckCircle2,
+  Globe2,
+  Loader2,
+  Network,
+  RotateCcw,
+} from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
-import type { AgentMessage, AgentName } from "@/lib/types";
-import { useState } from "react";
+import { getAgentRun } from "@/lib/api";
+import type { AgentMessage, AgentName, AgentRun } from "@/lib/types";
 
 const agentColors: Partial<Record<AgentName, string>> = {
   coordinator: "border-primary bg-primary/5",
@@ -24,122 +33,281 @@ export default function TraceView() {
     queryKey: ["run", runId],
     queryFn: () => getAgentRun(runId!),
     enabled: !!runId,
+    refetchInterval: (query) => {
+      const liveRun = query.state.data as AgentRun | undefined;
+      if (!liveRun) return 2000;
+      return liveRun.status === "pending" || liveRun.status === "running" ? 2000 : false;
+    },
   });
 
-  if (!run) return <div className="p-10 animate-pulse"><div className="h-8 w-48 bg-muted rounded" /></div>;
+  if (!run) {
+    return (
+      <div className="p-10 animate-pulse">
+        <div className="h-8 w-48 rounded bg-muted" />
+      </div>
+    );
+  }
 
-  const coordinator = run.messages.filter(m => m.agent_name === "coordinator");
-  const parallel = run.messages.filter(m => m.agent_type === "parallel");
-  const a2a = run.messages.filter(m => m.agent_type === "a2a");
-  const loops = run.messages.filter(m => m.agent_type === "loop");
-  const empathy = run.messages.filter(m => m.agent_name === "empathy_checkin");
+  const coordinator = run.messages.filter((message) => message.agent_name === "coordinator");
+  const parallel = run.messages.filter((message) => message.agent_type === "parallel");
+  const a2a = run.messages.filter((message) => message.agent_type === "a2a");
+  const loops = run.messages.filter((message) => message.agent_type === "loop");
+  const local = run.messages.filter(
+    (message) => message.agent_type === "local" && message.agent_name !== "coordinator",
+  );
+  const isLive = run.status === "pending" || run.status === "running";
 
   return (
-    <div className="p-6 lg:p-10 max-w-4xl mx-auto space-y-8">
+    <div className="p-6 lg:p-10 max-w-5xl mx-auto space-y-8">
       <div>
-        <Link to="/scenarios" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to scenarios
+        <Link
+          to="/traces"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to traces
         </Link>
         <div className="flex items-center gap-3">
           <Network className="h-6 w-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">Agent Trace</h1>
-            <p className="text-muted-foreground text-sm">
-              Run <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{run.id}</code> · {run.status}
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                {run.member_label || `Member #${run.user_id}`}
+                {run.persona ? ` · ${run.persona.replace("_", " ")}` : ""}
+              </span>
+              <Badge variant="outline" className="capitalize">
+                {run.status}
+              </Badge>
+              {run.risk_level ? (
+                <Badge variant="outline" className="capitalize">
+                  {run.risk_level} risk
+                </Badge>
+              ) : null}
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Run <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{run.id}</code>
+              {run.summary ? ` · ${run.summary}` : ""}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Coordinator Start */}
-      {coordinator[0] && <TraceCard msg={coordinator[0]} />}
-
-      {/* Parallel Agents — Side by Side */}
-      {parallel.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Badge variant="outline" className="text-xs">Parallel Execution</Badge>
+      {isLive ? (
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">
+          <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-primary" />
+          <div>
+            <p className="text-sm font-semibold">Run still in progress</p>
+            <p className="text-sm text-muted-foreground">
+              Polling every 2 seconds until the final trace data is available.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {parallel.map((msg, i) => (
-              <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                <TraceCard msg={msg} compact />
+        </div>
+      ) : null}
+
+      <FinalActionSection run={run} />
+
+      {coordinator.length > 0 ? (
+        <TraceSection title="Coordinator">
+          <div className="space-y-3">
+            {coordinator.map((message, index) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.06 }}
+              >
+                <TraceCard msg={message} />
               </motion.div>
             ))}
           </div>
-        </div>
-      )}
+        </TraceSection>
+      ) : null}
 
-      {/* A2A Specialist */}
-      {a2a.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Globe2 className="h-4 w-4 text-info" />
-            <Badge variant="outline" className="text-xs border-info/30 text-info">A2A Remote Specialist</Badge>
+      {parallel.length > 0 ? (
+        <TraceSection title="Parallel Execution" badge="Concurrent">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            {parallel.map((message, index) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.08 }}
+              >
+                <TraceCard msg={message} compact />
+              </motion.div>
+            ))}
           </div>
-          {a2a.map((msg) => (
-            <TraceCard key={msg.id} msg={msg} isA2A />
-          ))}
-        </div>
-      )}
+        </TraceSection>
+      ) : null}
 
-      {/* Validation Loop */}
-      {loops.length > 0 && (
-        <LoopSection messages={loops} />
-      )}
+      {a2a.length > 0 ? (
+        <TraceSection title="Remote Specialists" badge="A2A">
+          <div className="space-y-3">
+            {a2a.map((message) => (
+              <TraceCard key={message.id} msg={message} isA2A />
+            ))}
+          </div>
+        </TraceSection>
+      ) : null}
 
-      {/* Empathy */}
-      {empathy.map((msg) => (
-        <TraceCard key={msg.id} msg={msg} />
-      ))}
+      {loops.length > 0 ? <LoopSection messages={loops} /> : null}
 
-      {/* Coordinator End */}
-      {coordinator[1] && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-success/5 border border-success/20">
-          <CheckCircle2 className="h-5 w-5 text-success" />
-          <p className="text-sm">{coordinator[1].content}</p>
-        </div>
-      )}
+      {local.length > 0 ? (
+        <TraceSection title="Local Agents">
+          <div className="space-y-3">
+            {local.map((message, index) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <TraceCard msg={message} />
+              </motion.div>
+            ))}
+          </div>
+        </TraceSection>
+      ) : null}
     </div>
+  );
+}
+
+function FinalActionSection({ run }: { run: AgentRun }) {
+  if (!run.final_action && !run.case) return null;
+
+  return (
+    <div className="rounded-xl border border-success/20 bg-success/5 p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <CheckCircle2 className="mt-0.5 h-5 w-5 text-success" />
+        <div className="flex-1 space-y-4">
+          <div>
+            <p className="text-sm font-semibold">Final action</p>
+            <p className="text-sm text-muted-foreground">
+              Persisted intervention and case details for this run.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {run.risk_level ? (
+              <Badge variant="outline" className="capitalize">
+                {run.risk_level} risk
+              </Badge>
+            ) : null}
+            {run.case ? (
+              <Badge variant="outline" className="capitalize">
+                Case {run.case.status.replace("_", " ")}
+              </Badge>
+            ) : null}
+          </div>
+
+          {run.final_action ? (
+            <>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <ActionCard title="Meal Suggestion" description={run.final_action.meal_suggestion} />
+                <ActionCard title="Activity Suggestion" description={run.final_action.activity_suggestion} />
+                <ActionCard title="Wellness Action" description={run.final_action.wellness_action} />
+              </div>
+              <div className="rounded-lg border border-success/20 bg-background/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Empathy Message</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {run.final_action.empathy_message}
+                </p>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActionCard({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-lg border border-success/20 bg-background/80 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function TraceSection({
+  title,
+  badge,
+  children,
+}: {
+  title: string;
+  badge?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        {badge ? (
+          <Badge variant="outline" className="text-[11px] uppercase tracking-wide">
+            {badge}
+          </Badge>
+        ) : null}
+      </div>
+      {children}
+    </section>
   );
 }
 
 function TraceCard({ msg, compact, isA2A }: { msg: AgentMessage; compact?: boolean; isA2A?: boolean }) {
   const color = agentColors[msg.agent_name as AgentName] || "border-border bg-card";
+
   return (
-    <div className={`p-4 rounded-xl border-l-4 ${color} ${compact ? "text-sm" : ""}`}>
-      <div className="flex items-center gap-2 mb-2">
-        {isA2A ? <Globe2 className="h-3.5 w-3.5 text-info" /> : <Bot className="h-3.5 w-3.5 text-muted-foreground" />}
+    <div className={`rounded-xl border-l-4 p-4 ${color} ${compact ? "text-sm" : ""}`}>
+      <div className="mb-2 flex items-center gap-2">
+        {isA2A ? (
+          <Globe2 className="h-3.5 w-3.5 text-info" />
+        ) : (
+          <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+        )}
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {msg.agent_name.replace(/_/g, " ")}
         </span>
-        {msg.loop_iteration && (
-          <Badge variant="outline" className="text-xs">Iter {msg.loop_iteration}</Badge>
-        )}
+        {msg.loop_iteration ? (
+          <Badge variant="outline" className="text-xs">
+            Iter {msg.loop_iteration}
+          </Badge>
+        ) : null}
       </div>
-      <p className={`text-muted-foreground leading-relaxed ${compact ? "text-xs" : "text-sm"}`}>{msg.content}</p>
+      <p className={`leading-relaxed text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>{msg.content}</p>
     </div>
   );
 }
 
 function LoopSection({ messages }: { messages: AgentMessage[] }) {
   const [expanded, setExpanded] = useState(true);
+
   return (
-    <div>
-      <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 mb-3 group">
+    <section className="space-y-3">
+      <button onClick={() => setExpanded(!expanded)} className="group flex items-center gap-2">
         <RotateCcw className="h-4 w-4 text-muted-foreground" />
-        <Badge variant="outline" className="text-xs">Validation Loop · {messages.length} iterations</Badge>
-        <span className="text-xs text-muted-foreground group-hover:text-foreground">{expanded ? "Collapse" : "Expand"}</span>
+        <h2 className="text-sm font-semibold">Validation Loop</h2>
+        <Badge variant="outline" className="text-[11px] uppercase tracking-wide">
+          {messages.length} iterations
+        </Badge>
+        <span className="text-xs text-muted-foreground group-hover:text-foreground">
+          {expanded ? "Collapse" : "Expand"}
+        </span>
       </button>
-      {expanded && (
-        <div className="space-y-3 pl-4 border-l-2 border-muted">
-          {messages.map((msg, i) => (
-            <motion.div key={msg.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
-              <TraceCard msg={msg} compact />
+      {expanded ? (
+        <div className="space-y-3 border-l-2 border-muted pl-4">
+          {messages.map((message, index) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.08 }}
+            >
+              <TraceCard msg={message} compact />
             </motion.div>
           ))}
         </div>
-      )}
-    </div>
+      ) : null}
+    </section>
   );
 }

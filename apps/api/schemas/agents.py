@@ -19,6 +19,10 @@ class AgentRunOut(BaseModel):
     started_at: datetime
     completed_at: Optional[datetime]
     risk_level: str
+    member_label: Optional[str] = None
+    member_email: Optional[str] = None
+    persona_type: Optional[str] = None
+    summary: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -37,11 +41,6 @@ class AgentMessageOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class RunTraceOut(BaseModel):
-    run: AgentRunOut
-    messages: List[AgentMessageOut]
-
-
 class CaseOut(BaseModel):
     id: int
     user_id: int
@@ -50,6 +49,10 @@ class CaseOut(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+    member_label: Optional[str] = None
+    member_email: Optional[str] = None
+    persona_type: Optional[str] = None
+    summary: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -69,6 +72,13 @@ class InterventionOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class RunTraceOut(BaseModel):
+    run: AgentRunOut
+    messages: List[AgentMessageOut]
+    intervention: Optional[InterventionOut] = None
+    case: Optional[CaseOut] = None
 
 
 class NotificationOut(BaseModel):

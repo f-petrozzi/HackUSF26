@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-import os
+from runtime_env import configure_runtime_env
+
+configure_runtime_env()
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,8 +20,19 @@ class Settings(BaseSettings):
     clerk_jwks_url: str = ""
     clerk_authorized_parties: str = ""
 
-    # Gemini
-    gemini_api_key: str = ""
+    # Azure OpenAI / OpenAI-compatible endpoint
+    azure_openai_api_key: str = ""
+    azure_api_key: str = ""
+    openai_api_key: str = ""
+    azure_openai_endpoint: str = ""
+    azure_openai_base_url: str = ""
+    openai_base_url: str = ""
+    azure_openai_api_version: str = ""
+    openai_api_version: str = ""
+    azure_openai_deployment: str = ""
+    azure_openai_deployment_name: str = ""
+    azure_openai_model: str = ""
+    openai_model: str = ""
 
     # Garmin
     garmin_enabled: bool = False

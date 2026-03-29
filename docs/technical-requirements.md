@@ -9,13 +9,13 @@ This document translates approved business requirements into specific technical 
 | Requirement | Priority | MVP |
 |---|---|---|
 | Require authentication before accessing any dashboard or triggering any agent run | P0 | MVP |
-| Support simple email/password auth with JWT tokens (no OAuth provider required for MVP) | P0 | MVP |
-| Store only internal user ID and support email in the auth table | P0 | MVP |
+| Use Clerk for identity — Clerk-hosted sign-in, session token verified by backend via PyJWT | P0 | MVP |
+| Backend resolves Clerk session token → internal user row (get_or_create on first login) | P0 | MVP |
 | Health, case, and recommendation tables must reference internal user ID only — no names or emails | P0 | MVP |
-| Support a single admin role with separate dashboard access | P1 | MVP |
+| Support roles: member, coordinator, admin — admin has separate dashboard access | P1 | MVP |
 | Support account deletion (soft delete, immediate deactivation) | P2 | Future |
 
-**Acceptance criteria:** A user cannot reach any app screen without a valid JWT. Health tables contain no PII columns.
+**Acceptance criteria:** A user cannot reach any app screen without a valid Clerk session. Health tables contain no PII columns. Backend auth.py uses `verify_clerk_session_token` + `get_or_create_clerk_user`.
 
 ---
 
@@ -147,7 +147,7 @@ Use Alembic for migrations. Seed data must be committed.
 
 ---
 
-## 7. Frontend (Next.js)
+## 7. Frontend (Vite/React SPA)
 
 | Screen | Required content | Priority |
 |---|---|---|
@@ -157,6 +157,8 @@ Use Alembic for migrations. Seed data must be committed.
 | Scenario runner | Dropdown of seeded scenarios; trigger button; live status polling; auto-navigate to trace on completion | P0 |
 | Onboarding | Single-page form; redirects to member dashboard on submit | P0 |
 | Manual check-in | Short form (mood, sleep hours, stress level, note); submits signal event and triggers run | P1 |
+
+**Stack:** Vite + React + TypeScript, React Router, Clerk React SDK, shadcn/ui, Tailwind CSS, TanStack Query for polling.
 
 **Acceptance criteria:** All screens render without error on first load. Trace view clearly distinguishes parallel vs sequential vs A2A vs loop agent messages.
 

@@ -22,7 +22,7 @@ except Exception as exc:  # pragma: no cover - exercised in local fallback
         name: str
         instruction: str
         tools: List[Any] = field(default_factory=list)
-        model: str = "gemini-2.0-flash"
+        model: str = "gpt-4.1-mini"
 
     @dataclass
     class ParallelAgent:

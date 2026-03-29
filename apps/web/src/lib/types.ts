@@ -1,7 +1,7 @@
 export type RiskLevel = "low" | "moderate" | "high" | "critical";
 export type CaseStatus = "open" | "in_progress" | "closed";
 export type PersonaType = "student" | "caregiver" | "older_adult" | "accessibility_focused";
-export type UserRole = "member" | "admin";
+export type UserRole = "member" | "coordinator" | "admin";
 export type RunStatus = "pending" | "running" | "completed" | "failed";
 export type SignalType =
   | "sleep_hours"
@@ -60,13 +60,22 @@ export interface InterventionCard {
 export interface Case {
   id: string;
   user_id: string;
-  user_name?: string;
+  run_id?: string;
+  member_label?: string;
+  member_email?: string;
   persona?: PersonaType;
   risk_level: RiskLevel;
   status: CaseStatus;
   summary: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface FinalAction {
+  meal_suggestion: string;
+  activity_suggestion: string;
+  wellness_action: string;
+  empathy_message: string;
 }
 
 export interface AgentMessage {
@@ -91,7 +100,18 @@ export interface AgentRun {
   started_at: string;
   completed_at?: string;
   risk_level?: RiskLevel;
+  member_label?: string;
+  member_email?: string;
+  persona?: PersonaType;
+  summary?: string;
+  final_action?: FinalAction;
+  case?: Case;
   messages: AgentMessage[];
+}
+
+export interface TriggeredRun {
+  id: string;
+  status: RunStatus;
 }
 
 export interface HealthSummary {
