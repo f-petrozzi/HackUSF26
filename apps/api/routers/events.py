@@ -20,6 +20,7 @@ from database import get_db
 from models.agents import AgentRun
 from models.events import BehaviorEvent, NormalizedEvent, WearableEvent
 from models.user import User
+from run_dispatch import coordinator_api_base_url
 from schemas.agents import AgentRunOut
 from schemas.events import CheckInRequest, IngestEventRequest, NormalizedEventOut, SimulateRequest, WearableEventOut
 
@@ -168,7 +169,7 @@ async def checkin(
         user_id=user.id,
         run_id=run.id,
         auth_header=request.headers.get("authorization", ""),
-        api_base_url=str(request.base_url).rstrip("/"),
+        api_base_url=coordinator_api_base_url(request),
         scenario="live",
     )
     return run

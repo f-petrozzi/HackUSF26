@@ -27,6 +27,7 @@ def api_request(
                     headers=headers,
                     json=json_payload,
                     params=params,
+                    follow_redirects=True,
                 )
                 response.raise_for_status()
                 return response.json()
